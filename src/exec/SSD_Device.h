@@ -18,6 +18,7 @@
 #include "Device_Parameter_Set.h"
 #include "IO_Flow_Parameter_Set.h"
 #include "../utils/Workload_Statistics.h"
+#include "../ssd/Flash_Mode_Controller.h"//
 
 /*********************************************************************************************************
 * An SSD device has the following components:

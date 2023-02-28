@@ -1,6 +1,7 @@
 #ifndef IO_FLOW_BASE_H
 #define IO_FLOW_BASE_H
 
+//#include "NextRequestTime.h"
 #include <string>
 #include <iostream>
 #include <unordered_map>
@@ -39,6 +40,7 @@ namespace Host_Components
 							nvme_queue_pair.Submission_queue_tail = 0;
 
 	class PCIe_Root_Complex;
+	class NextRequestTime;
 	class IO_Flow_Base : public MQSimEngine::Sim_Object, public MQSimEngine::Sim_Reporter
 	{
 	public:
@@ -68,6 +70,9 @@ namespace Host_Components
 		void Report_results_in_XML(std::string name_prefix, Utils::XmlWriter& xmlwriter);
 		virtual void Get_statistics(Utils::Workload_Statistics& stats, LPA_type(*Convert_host_logical_address_to_device_address)(LHA_type lha),
 			page_status_type(*Find_NVM_subunit_access_bitmap)(LHA_type lha)) = 0;
+
+		
+		virtual void setNextTimeToDevice(sim_time_type) = 0;
 	protected:
 		uint16_t flow_id;
 		double initial_occupancy_ratio;//The initial amount of valid logical pages when pereconditioning is performed

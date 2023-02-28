@@ -17,6 +17,13 @@
 #include "../ssd/NVM_PHY_ONFI_NVDDR2.h"
 #include "../utils/Logical_Address_Partitioning_Unit.h"
 
+/**
+ * 수정계획
+ * step1의 read/write latency를 flash mode에 따라 선택할 수 있도록 수정
+*/
+
+SSD_Components::FTL *pFirmware;
+
 SSD_Device *SSD_Device::my_instance; //Used in static functions
 
 SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Parameter_Set *> *io_flows) : MQSimEngine::Sim_Object("SSDDevice")
@@ -119,6 +126,9 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		ftl->PHY = (SSD_Components::NVM_PHY_ONFI *)PHY;
 		Simulator->AddObject(ftl);
 		device->Firmware = ftl;
+
+		//IO_Flow_Base를 위한 ftl 포인터 - 23.02.27
+		pFirmware = ftl;
 
 		//Step 5: create TSU
 		SSD_Components::TSU_Base *tsu;
@@ -291,7 +301,7 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		Simulator->AddObject(amu);
 		ftl->Address_Mapping_Unit = amu;
 
-		//Step 8: create GC_and_WL_unit
+		//Step 8-1: create GC_and_WL_unit
 		double max_rho = 0;
 		for (unsigned int i = 0; i < io_flows->size(); i++)
 		{
@@ -312,6 +322,17 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		Simulator->AddObject(gcwl);
 		fbm->Set_GC_and_WL_Unit(gcwl);
 		ftl->GC_and_WL_Unit = gcwl;
+
+		//Step 8-2: create Flash_Mode_Controller 
+		SSD_Components::Flash_Mode_Controller * fmc;
+		fmc = new SSD_Components::Flash_Mode_Controller(ftl->ID() + ".FlashModeController",amu,fbm,tsu,(SSD_Components::NVM_PHY_ONFI *)device->PHY,
+														parameters->Flash_Channel_Count, parameters->Chip_No_Per_Channel,
+														parameters->Flash_Parameters.Die_No_Per_Chip, parameters->Flash_Parameters.Plane_No_Per_Die,
+														parameters->Flash_Parameters.Block_No_Per_Plane, parameters->Flash_Parameters.Page_No_Per_Block,parameters->Flash_Parameters.Page_Capacity / SECTOR_SIZE_IN_BYTE);
+		Simulator->AddObject(fmc);
+		fbm->setFlashModeController(fmc);
+		ftl->FMC = fmc;
+
 
 		//Step 9: create Data_Cache_Manager
 		SSD_Components::Data_Cache_Manager_Base *dcm;
@@ -388,6 +409,7 @@ SSD_Device::~SSD_Device()
 	delete ((SSD_Components::FTL *)this->Firmware)->BlockManager;
 	delete ((SSD_Components::FTL *)this->Firmware)->Address_Mapping_Unit;
 	delete ((SSD_Components::FTL *)this->Firmware)->GC_and_WL_Unit;
+	delete ((SSD_Components::FTL *)this->Firmware)->FMC;
 	delete this->Firmware;
 	delete this->Cache_manager;
 	delete this->Host_interface;

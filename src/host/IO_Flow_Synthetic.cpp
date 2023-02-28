@@ -3,6 +3,8 @@
 #include "../sim/Engine.h"
 #include "IO_Flow_Synthetic.h"
 
+extern SSD_Components::FTL *pFirmware;
+
 namespace Host_Components
 {
 IO_Flow_Synthetic::IO_Flow_Synthetic(const sim_object_id_type &name, uint16_t flow_id,
@@ -20,6 +22,7 @@ IO_Flow_Synthetic::IO_Flow_Synthetic(const sim_object_id_type &name, uint16_t fl
 																														  generator_type(generator_type), Average_inter_arrival_time_nano_sec(Average_inter_arrival_time_nano_sec), average_number_of_enqueued_requests(average_number_of_enqueued_requests),
 																														  seed(seed), generate_aligned_addresses(generate_aligned_addresses), alignment_value(alignment_value)
 {
+	nrt = new NextRequestTime(pFirmware);
 	//If read ratio is 0, then we change its value to a negative one so that in request generation we never generate a read request
 	if (read_ratio == 0.0)
 	{
@@ -69,6 +72,11 @@ IO_Flow_Synthetic::IO_Flow_Synthetic(const sim_object_id_type &name, uint16_t fl
 		delete random_hot_address_generator;
 		delete random_request_size_generator;
 		delete random_time_interval_generator;
+	}
+
+	void IO_Flow_Synthetic::setNextTimeToDevice(sim_time_type time)
+	{
+		nrt->setNextTimeToDevice(time);
 	}
 
 	Host_IO_Request* IO_Flow_Synthetic::Generate_next_request()
@@ -218,11 +226,14 @@ IO_Flow_Synthetic::IO_Flow_Synthetic(const sim_object_id_type &name, uint16_t fl
 
 	void IO_Flow_Synthetic::Execute_simulator_event(MQSimEngine::Sim_Event* event)
 	{
+		sim_time_type nextTime;
 		if (generator_type == Utils::Request_Generator_Type::BANDWIDTH) {
 			Host_IO_Request* req = Generate_next_request();
 			if (req != NULL) {
 				Submit_io_request(req);
-				Simulator->Register_sim_event(Simulator->Time() + (sim_time_type)random_time_interval_generator->Exponential((double)Average_inter_arrival_time_nano_sec), this, 0, 0);
+				nextTime = Simulator->Time() + (sim_time_type)random_time_interval_generator->Exponential((double)Average_inter_arrival_time_nano_sec);
+				setNextTimeToDevice(nextTime);
+				Simulator->Register_sim_event(nextTime, this, 0, 0);
 			}
 		} else {
 			for (unsigned int i = 0; i < average_number_of_enqueued_requests; i++) {

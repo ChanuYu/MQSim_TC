@@ -13,6 +13,11 @@
 #include "NVM_Transaction.h"
 #include "User_Request.h"
 
+
+/**
+ * 수정로그: 23.02.27 bool isSLCTrx 추가
+*/
+
 namespace SSD_Components
 {
 	class User_Request;
@@ -21,9 +26,9 @@ namespace SSD_Components
 	{
 	public:
 		NVM_Transaction_Flash(Transaction_Source_Type source, Transaction_Type type, stream_id_type stream_id,
-			unsigned int data_size_in_byte, LPA_type lpa, PPA_type ppa, User_Request* user_request, IO_Flow_Priority_Class::Priority priority_class);
+			unsigned int data_size_in_byte, LPA_type lpa, PPA_type ppa, User_Request* user_request, IO_Flow_Priority_Class::Priority priority_class, bool isSLCTrx = false);
 		NVM_Transaction_Flash(Transaction_Source_Type source, Transaction_Type type, stream_id_type stream_id,
-			unsigned int data_size_in_byte, LPA_type lpa, PPA_type ppa, const NVM::FlashMemory::Physical_Page_Address& address, User_Request* user_request, IO_Flow_Priority_Class::Priority priority_class);
+			unsigned int data_size_in_byte, LPA_type lpa, PPA_type ppa, const NVM::FlashMemory::Physical_Page_Address& address, User_Request* user_request, IO_Flow_Priority_Class::Priority priority_class, bool isSLCTrx = false);
 		NVM::FlashMemory::Physical_Page_Address Address;
 		unsigned int Data_and_metadata_size_in_byte; //number of bytes contained in the request: bytes in the real page + bytes of metadata
 
@@ -34,6 +39,8 @@ namespace SSD_Components
 		bool Physical_address_determined;
 		sim_time_type Estimated_alone_waiting_time;//Used in scheduling methods, such as FLIN, where fairness and QoS is considered in scheduling
 		bool FLIN_Barrier;//Especially used in queue reordering in FLIN scheduler
+
+		bool isSLCTrx;
 	private:
 
 	};

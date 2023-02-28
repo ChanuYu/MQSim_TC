@@ -14,6 +14,7 @@ namespace SSD_Components
 {
 #define All_VALID_PAGE 0x0000000000000000ULL
 	class GC_and_WL_Unit_Base;
+	class Flash_Mode_Controller;
 	/*
 	* Block_Service_Status is used to impelement a state machine for each physical block in order to
 	* eliminate race conditions between GC page movements and normal user I/O requests.
@@ -86,6 +87,7 @@ namespace SSD_Components
 		flash_block_ID_type Get_coldest_block_id(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		unsigned int Get_min_max_erase_difference(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		void Set_GC_and_WL_Unit(GC_and_WL_Unit_Base* );
+		void setFlashModeController(Flash_Mode_Controller*);
 		PlaneBookKeepingType* Get_plane_bookkeeping_entry(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		bool Block_has_ongoing_gc_wl(const NVM::FlashMemory::Physical_Page_Address& block_address);//Checks if there is an ongoing gc for block_address
 		bool Can_execute_gc_wl(const NVM::FlashMemory::Physical_Page_Address& block_address);//Checks if the gc request can be executed on block_address (there shouldn't be any ongoing user read/program requests targeting block_address)
@@ -99,6 +101,7 @@ namespace SSD_Components
 	protected:
 		PlaneBookKeepingType ****plane_manager;//Keeps track of plane block usage information
 		GC_and_WL_Unit_Base *gc_and_wl_unit;
+		Flash_Mode_Controller *FMC;
 		unsigned int max_allowed_block_erase_count;
 		unsigned int total_concurrent_streams_no;
 		unsigned int channel_count;

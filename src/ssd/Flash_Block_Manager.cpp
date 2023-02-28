@@ -17,6 +17,11 @@ namespace SSD_Components
 	{
 	}
 
+	/**
+	 * 할당된 plane에 대하여 block을 지정하여 bookkeeping 
+	 * 수정계획: transaction별로 행선지(slc/tlc)를 기록하는 변수를 두고 그에 따라 블록 할당 (Data_wf_slc/Data_wf_tlc) 
+	 * read/write(gc가 아닌 경우만 해당) 둘 다 이 함수를 거침
+	*/
 	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_user_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];

@@ -89,6 +89,11 @@ namespace SSD_Components
 		this->gc_and_wl_unit = gcwl;
 	}
 
+	void Flash_Block_Manager_Base::setFlashModeController(Flash_Mode_Controller* fmc)
+	{
+		this->FMC = fmc;
+	}
+
 	void Block_Pool_Slot_Type::Erase()
 	{
 		Current_page_write_index = 0;

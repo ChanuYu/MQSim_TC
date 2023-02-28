@@ -9,6 +9,10 @@
 #include "TSU_Base.h"
 #include "NVM_PHY_ONFI.h"
 
+/**
+ * 모듈설명: IDLE 상태일 때 (nextRequestTime 변수 참고) 
+*/
+
 namespace SSD_Components
 {
 
@@ -20,11 +24,30 @@ namespace SSD_Components
 			unsigned int channel_count, unsigned int chip_no_per_channel, unsigned int die_no_per_chip, unsigned int plane_no_per_die,
 			unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int sector_no_per_page);
 
-        void Setup_triggers();
+        void setNextRequestTime(time_t);
+        time_t getNextRequestTime();
+
+
         void Start_simulation();
         void Validate_simulation_config();
         void Execute_simulator_event(MQSimEngine::Sim_Event*);
 
+    private:
+        static Flash_Mode_Controller * _my_instance;
+        Address_Mapping_Unit_Base * address_mapping_unit;
+        Flash_Block_Manager_Base* block_manager;
+		TSU_Base* tsu;
+		NVM_PHY_ONFI* flash_controller;
+
+        time_t nextRequestTime;
+
+        unsigned int channel_count;
+		unsigned int chip_no_per_channel;
+		unsigned int die_no_per_chip;
+		unsigned int plane_no_per_die;
+		unsigned int block_no_per_plane;
+		unsigned int pages_no_per_block;
+		unsigned int sector_no_per_page;
     };
 
 } //end of SSD_Components

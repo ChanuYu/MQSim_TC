@@ -3,6 +3,8 @@
 #include "ASCII_Trace_Definition.h"
 #include "../utils/DistributionTypes.h"
 
+extern SSD_Components::FTL *pFirmware;
+
 namespace Host_Components
 {
 IO_Flow_Trace_Based::IO_Flow_Trace_Based(const sim_object_id_type &name, uint16_t flow_id, LHA_type start_lsa_on_device, LHA_type end_lsa_on_device, uint16_t io_queue_id,
@@ -13,6 +15,7 @@ IO_Flow_Trace_Based::IO_Flow_Trace_Based(const sim_object_id_type &name, uint16_
 																															  trace_file_path(trace_file_path), time_unit(time_unit), total_replay_no(total_replay_count), percentage_to_be_simulated(percentage_to_be_simulated),
 																															  total_requests_in_file(0), time_offset(0)
 {
+	nrt = new NextRequestTime(pFirmware);
 	if (percentage_to_be_simulated > 100)
 	{
 		percentage_to_be_simulated = 100;
@@ -22,6 +25,11 @@ IO_Flow_Trace_Based::IO_Flow_Trace_Based(const sim_object_id_type &name, uint16_
 
 IO_Flow_Trace_Based::~IO_Flow_Trace_Based()
 {
+}
+
+void IO_Flow_Trace_Based::setNextTimeToDevice(sim_time_type time)
+{
+	nrt->setNextTimeToDevice(time);
 }
 
 Host_IO_Request *IO_Flow_Trace_Based::Generate_next_request()
@@ -77,7 +85,7 @@ void IO_Flow_Trace_Based::Start_simulation()
 {
 	IO_Flow_Base::Start_simulation();
 	std::string trace_line;
-	char *pEnd;
+	char *pEnd, *pEnd_next;
 
 	trace_file.open(trace_file_path, std::ios::in);
 	if (!trace_file.is_open())
@@ -122,6 +130,15 @@ void IO_Flow_Trace_Based::Start_simulation()
 	std::getline(trace_file, trace_line);
 	Utils::Helper_Functions::Remove_cr(trace_line);
 	Utils::Helper_Functions::Tokenize(trace_line, ASCIILineDelimiter, current_trace_line);
+
+	//get next request - 23.02.27
+	std::string nextLine;
+	std::getline(trace_file, nextLine);
+	Utils::Helper_Functions::Remove_cr(nextLine);
+	Utils::Helper_Functions::Tokenize(nextLine, ASCIILineDelimiter, next_trace_line);
+
+	setNextTimeToDevice(std::strtoll(next_trace_line[ASCIITraceTimeColumn].c_str(),&pEnd_next,10));
+
 	Simulator->Register_sim_event(std::strtoll(current_trace_line[ASCIITraceTimeColumn].c_str(), &pEnd, 10), this);
 }
 
@@ -139,12 +156,14 @@ void IO_Flow_Trace_Based::Execute_simulator_event(MQSimEngine::Sim_Event *)
 
 	if (STAT_generated_request_count < total_requests_to_be_generated)
 	{
+		current_trace_line.clear();
+		current_trace_line = next_trace_line;
 		std::string trace_line;
 		if (std::getline(trace_file, trace_line))
 		{
 			Utils::Helper_Functions::Remove_cr(trace_line);
-			current_trace_line.clear();
-			Utils::Helper_Functions::Tokenize(trace_line, ASCIILineDelimiter, current_trace_line);
+			next_trace_line.clear();
+			Utils::Helper_Functions::Tokenize(trace_line, ASCIILineDelimiter, next_trace_line);
 		}
 		else
 		{
@@ -156,9 +175,19 @@ void IO_Flow_Trace_Based::Execute_simulator_event(MQSimEngine::Sim_Event *)
 			Utils::Helper_Functions::Remove_cr(trace_line);
 			current_trace_line.clear();
 			Utils::Helper_Functions::Tokenize(trace_line, ASCIILineDelimiter, current_trace_line);
+
+			//get next request - 23.02.27
+			std::string nextLine;
+			std::getline(trace_file, nextLine);
+			Utils::Helper_Functions::Remove_cr(nextLine);
+			next_trace_line.clear();
+			Utils::Helper_Functions::Tokenize(nextLine, ASCIILineDelimiter, next_trace_line);
+
 			PRINT_MESSAGE("* Replay round " << replay_counter << "of " << total_replay_no << " started  for" << ID())
 		}
-		char *pEnd;
+		char *pEnd, *pEnd_next;
+
+		setNextTimeToDevice(std::strtoll(next_trace_line[ASCIITraceTimeColumn].c_str(),&pEnd_next,10));
 		Simulator->Register_sim_event(time_offset + std::strtoll(current_trace_line[ASCIITraceTimeColumn].c_str(), &pEnd, 10), this);
 	}
 }

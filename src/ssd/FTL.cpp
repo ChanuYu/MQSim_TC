@@ -888,6 +888,15 @@ namespace SSD_Components
 		xmlwriter.Write_end_element_tag();
 	}
 
+	void FTL::setNextRequestTime(time_t nextTime)
+	{
+		this->nextRequestTime = nextTime;
+	}
+    time_t FTL::getNextRequestTime()
+	{
+		return this->nextRequestTime;
+	}
+
 	void FTL::Start_simulation()
 	{
 	}

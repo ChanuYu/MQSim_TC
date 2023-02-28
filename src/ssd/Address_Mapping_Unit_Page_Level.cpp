@@ -279,6 +279,7 @@ namespace SSD_Components
 		return GlobalMappingTable[lpa].PPA;
 	}
 
+	//ideal mapping이면 true 반환
 	inline bool AddressMappingDomain::Mapping_entry_accessible(const bool ideal_mapping, const stream_id_type stream_id, const LPA_type lpa)
 	{
 		if (ideal_mapping) {
@@ -479,6 +480,7 @@ namespace SSD_Components
 
 	void Address_Mapping_Unit_Page_Level::Translate_lpa_to_ppa_and_dispatch(const std::list<NVM_Transaction*>& transactionList)
 	{
+		//translate lpa to ppa
 		for (std::list<NVM_Transaction*>::const_iterator it = transactionList.begin();
 			it != transactionList.end(); ) {
 			if (is_lpa_locked_for_gc((*it)->Stream_id, ((NVM_Transaction_Flash*)(*it))->LPA)) {
@@ -489,6 +491,7 @@ namespace SSD_Components
 			}
 		}
 
+		//dispatch
 		if (transactionList.size() > 0) {
 			ftl->TSU->Prepare_for_transaction_submit();
 			for (std::list<NVM_Transaction*>::const_iterator it = transactionList.begin();
@@ -513,6 +516,7 @@ namespace SSD_Components
 		Stats::total_CMT_queries++;
 		Stats::total_CMT_queries_per_stream[stream_id]++;
 
+		//ideal mapping의 경우
 		if (domains[stream_id]->Mapping_entry_accessible(ideal_mapping_table, stream_id, transaction->LPA))//Either limited or unlimited CMT
 		{
 			Stats::CMT_hits_per_stream[stream_id]++;
@@ -1222,6 +1226,7 @@ namespace SSD_Components
 		domain->GlobalTranslationDirectory[mvpn].TimeStamp = CurrentTimeStamp;
 	}
 
+	//plane allocation 기법에 따라 Physical_Page_Address& read_address에 위치 정보 기록
 	PPA_type Address_Mapping_Unit_Page_Level::online_create_entry_for_reads(LPA_type lpa, const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& read_address, uint64_t read_sectors_bitmap)
 	{
 		AddressMappingDomain* domain = domains[stream_id];
