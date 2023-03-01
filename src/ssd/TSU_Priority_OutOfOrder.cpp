@@ -193,6 +193,7 @@ void TSU_Priority_OutOfOrder::Report_results_in_XML(std::string name_prefix, Uti
     xmlwriter.Write_close_tag();
 }
 
+//Data Cache Manager => AMU => TSU (트랜잭션 리스트의 이동경로) {Submit_Transaction() -> Schedule()}
 void TSU_Priority_OutOfOrder::Schedule()
 {
     opened_scheduling_reqs--;
@@ -211,6 +212,7 @@ void TSU_Priority_OutOfOrder::Schedule()
         return;
     }
 
+    //트랜잭션 유형별 TrxQueue에 추가
     for (std::list<NVM_Transaction_Flash *>::iterator it = transaction_receive_slots.begin();
          it != transaction_receive_slots.end();
          it++)
@@ -337,6 +339,7 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
     Flash_Transaction_Queue *sourceQueue1 = NULL, *sourceQueue2 = NULL;
 
     //Flash transactions that are related to FTL mapping data have the highest priority
+    //매핑 정보 처리 트랜잭션 우선
     if (MappingReadTRQueue[chip->ChannelID][chip->ChipID].size() > 0)
     {
         sourceQueue1 = &MappingReadTRQueue[chip->ChannelID][chip->ChipID];
@@ -349,6 +352,7 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
             sourceQueue2 = get_next_read_service_queue(chip);
         }
     }
+    //그 다음 GC_WL 확인
     else if (ftl->GC_and_WL_Unit->GC_is_in_urgent_mode(chip))
     {
         //If flash transactions related to GC are prioritzed (non-preemptive execution mode of GC), then GC queues are checked first
@@ -359,21 +363,22 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
         }
         else if (GCWriteTRQueue[chip->ChannelID][chip->ChipID].size() > 0)
         {
-            return false;
+            return false; //service_write_trx()실행
         }
         else if (GCEraseTRQueue[chip->ChannelID][chip->ChipID].size() > 0)
         {
-            return false;
+            return false; //service_write_trx()실행
         }
         else
         {
             sourceQueue1 = get_next_read_service_queue(chip);
             if (sourceQueue1 == NULL)
             {
-                return false;
+                return false; //service_write_trx()실행
             }
         }
     }
+    //우선순위로 처리해야 할 것이 없는 경우
     else
     {
         //If GC is currently executed in the preemptive mode, then user IO transaction queues are checked first
@@ -387,7 +392,7 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
         }
         else if (get_next_write_service_queue(chip) != NULL)
         {
-            return false;
+            return false; //service_write_trx()실행
         }
         else if (GCReadTRQueue[chip->ChannelID][chip->ChipID].size() > 0)
         {

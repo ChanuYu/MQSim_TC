@@ -128,6 +128,7 @@ namespace SSD_Components {
 		channels[page_address.ChannelID]->Chips[page_address.ChipID]->Change_memory_status_preconditioning(&page_address, &lpa);
 	}
 	
+	//PHYSICAL FLASH MEMORY에 명령 전달
 	void NVM_PHY_ONFI_NVDDR2::Send_command_to_chip(std::list<NVM_Transaction_Flash*>& transaction_list)
 	{
 		ONFI_Channel_NVDDR2* target_channel = channels[transaction_list.front()->Address.ChannelID];
@@ -167,6 +168,7 @@ namespace SSD_Components {
 			}
 		}
 
+		//트랜잭션별로 Address, Meta_data(LPA) 정보를 die book keeping entry에 담아서 추가
 		dieBKE->Free = false;
 		dieBKE->ActiveCommand = new NVM::FlashMemory::Flash_Command();
 		for (std::list<NVM_Transaction_Flash*>::iterator it = transaction_list.begin();
@@ -178,6 +180,7 @@ namespace SSD_Components {
 			dieBKE->ActiveCommand->Meta_data.push_back(metadata);
 		}
 
+		//트랜잭션별로 통계치 조정, chip에 StartCMDXfer()호출, sim_event 등록, expected finish time 조정
 		switch (transaction_list.front()->Type) {
 			case Transaction_Type::READ:
 				if (transaction_list.size() == 1) {
@@ -190,6 +193,7 @@ namespace SSD_Components {
 					DEBUG("Chip " << targetChip->ChannelID << ", " << targetChip->ChipID << ", " << transaction_list.front()->Address.DieID << ": Sending multi-plane read command to chip for LPA: " << transaction_list.front()->LPA)
 				}
 
+				//멀티 플레인의 경우 transfer time이 더 길어지는 것을 반영
 				for (std::list<NVM_Transaction_Flash*>::iterator it = transaction_list.begin();
 					it != transaction_list.end(); it++) {
 					(*it)->STAT_transfer_time += target_channel->ReadCommandTime[transaction_list.size()];

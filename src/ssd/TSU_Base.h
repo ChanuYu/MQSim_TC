@@ -54,6 +54,7 @@ public:
 		transaction_receive_slots.clear();
 	}
 
+	//transaction_receive_slot에 트랜잭션 추가
 	void Submit_transaction(NVM_Transaction_Flash *transaction)
 	{
 		transaction_receive_slots.push_back(transaction);

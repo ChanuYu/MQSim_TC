@@ -325,7 +325,7 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 
 		//Step 8-2: create Flash_Mode_Controller 
 		SSD_Components::Flash_Mode_Controller * fmc;
-		fmc = new SSD_Components::Flash_Mode_Controller(ftl->ID() + ".FlashModeController",amu,fbm,tsu,(SSD_Components::NVM_PHY_ONFI *)device->PHY,
+		fmc = new SSD_Components::Flash_Mode_Controller(ftl->ID() + ".FlashModeController",ftl,amu,fbm,tsu,(SSD_Components::NVM_PHY_ONFI *)device->PHY,
 														parameters->Flash_Channel_Count, parameters->Chip_No_Per_Channel,
 														parameters->Flash_Parameters.Die_No_Per_Chip, parameters->Flash_Parameters.Plane_No_Per_Die,
 														parameters->Flash_Parameters.Block_No_Per_Plane, parameters->Flash_Parameters.Page_No_Per_Block,parameters->Flash_Parameters.Page_Capacity / SECTOR_SIZE_IN_BYTE);

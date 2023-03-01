@@ -478,6 +478,7 @@ namespace SSD_Components
 		return domains[stream_id]->No_of_inserted_entries_in_preconditioning;
 	}
 
+	//Data Cache Manager => AMU => TSU (트랜잭션 리스트의 이동경로)
 	void Address_Mapping_Unit_Page_Level::Translate_lpa_to_ppa_and_dispatch(const std::list<NVM_Transaction*>& transactionList)
 	{
 		//translate lpa to ppa

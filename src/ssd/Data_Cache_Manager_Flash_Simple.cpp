@@ -61,6 +61,7 @@ namespace SSD_Components
 			switch (caching_mode_per_input_stream[user_request->Stream_id])
 			{
 				case Caching_Mode::TURNED_OFF:
+					//Data Cache Manager => AMU => TSU로 이동
 					static_cast<FTL*>(nvm_firmware)->Address_Mapping_Unit->Translate_lpa_to_ppa_and_dispatch(user_request->Transaction_list);
 					return;
 				case Caching_Mode::WRITE_CACHE:
@@ -104,6 +105,7 @@ namespace SSD_Components
 			switch (caching_mode_per_input_stream[user_request->Stream_id])
 			{
 				case Caching_Mode::TURNED_OFF:
+					//Data Cache Manager => AMU => TSU로 이동
 					static_cast<FTL*>(nvm_firmware)->Address_Mapping_Unit->Translate_lpa_to_ppa_and_dispatch(user_request->Transaction_list);
 					return;
 				case Caching_Mode::WRITE_CACHE://The data cache manger unit performs like a destage buffer
