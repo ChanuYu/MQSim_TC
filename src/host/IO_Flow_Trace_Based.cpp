@@ -3,7 +3,7 @@
 #include "ASCII_Trace_Definition.h"
 #include "../utils/DistributionTypes.h"
 
-extern SSD_Components::FTL *pFirmware;
+extern SSD_Components::FTL *p_firmware;
 
 namespace Host_Components
 {
@@ -15,7 +15,7 @@ IO_Flow_Trace_Based::IO_Flow_Trace_Based(const sim_object_id_type &name, uint16_
 																															  trace_file_path(trace_file_path), time_unit(time_unit), total_replay_no(total_replay_count), percentage_to_be_simulated(percentage_to_be_simulated),
 																															  total_requests_in_file(0), time_offset(0)
 {
-	nrt = new NextRequestTime(pFirmware);
+	nrt = new NextRequestTime(p_firmware);
 	if (percentage_to_be_simulated > 100)
 	{
 		percentage_to_be_simulated = 100;

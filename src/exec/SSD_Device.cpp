@@ -22,7 +22,12 @@
  * step1의 read/write latency를 flash mode에 따라 선택할 수 있도록 수정
 */
 
-SSD_Components::FTL *pFirmware;
+/**
+ * 수정 로그
+ * 
+*/
+
+SSD_Components::FTL *p_firmware;
 
 SSD_Device *SSD_Device::my_instance; //Used in static functions
 
@@ -128,7 +133,7 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		device->Firmware = ftl;
 
 		//IO_Flow_Base를 위한 ftl 포인터 - 23.02.27
-		pFirmware = ftl;
+		p_firmware = ftl;
 
 		//Step 5: create TSU
 		SSD_Components::TSU_Base *tsu;
@@ -328,7 +333,8 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		fmc = new SSD_Components::Flash_Mode_Controller(ftl->ID() + ".FlashModeController",ftl,amu,fbm,tsu,(SSD_Components::NVM_PHY_ONFI *)device->PHY,
 														parameters->Flash_Channel_Count, parameters->Chip_No_Per_Channel,
 														parameters->Flash_Parameters.Die_No_Per_Chip, parameters->Flash_Parameters.Plane_No_Per_Die,
-														parameters->Flash_Parameters.Block_No_Per_Plane, parameters->Flash_Parameters.Page_No_Per_Block,parameters->Flash_Parameters.Page_Capacity / SECTOR_SIZE_IN_BYTE);
+														parameters->Flash_Parameters.Block_No_Per_Plane, parameters->Flash_Parameters.Page_No_Per_Block,parameters->Flash_Parameters.Page_Capacity / SECTOR_SIZE_IN_BYTE,
+														parameters->Initial_SLC_Blk_Per_Plane);
 		Simulator->AddObject(fmc);
 		fbm->setFlashModeController(fmc);
 		ftl->FMC = fmc;

@@ -3,7 +3,7 @@
 #include "../sim/Engine.h"
 #include "IO_Flow_Synthetic.h"
 
-extern SSD_Components::FTL *pFirmware;
+extern SSD_Components::FTL *p_firmware;
 
 namespace Host_Components
 {
@@ -22,7 +22,7 @@ IO_Flow_Synthetic::IO_Flow_Synthetic(const sim_object_id_type &name, uint16_t fl
 																														  generator_type(generator_type), Average_inter_arrival_time_nano_sec(Average_inter_arrival_time_nano_sec), average_number_of_enqueued_requests(average_number_of_enqueued_requests),
 																														  seed(seed), generate_aligned_addresses(generate_aligned_addresses), alignment_value(alignment_value)
 {
-	nrt = new NextRequestTime(pFirmware);
+	nrt = new NextRequestTime(p_firmware);
 	//If read ratio is 0, then we change its value to a negative one so that in request generation we never generate a read request
 	if (read_ratio == 0.0)
 	{

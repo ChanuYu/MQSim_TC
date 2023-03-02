@@ -4,7 +4,7 @@
 #include "FTL.h"
 
 /**
- * 모듈설명: IDLE 상태일 때 (nextRequestTime 변수 참고) 
+ * 모듈설명: IDLE 상태일 때 plane별 SLC 블록 수를 조정 
 */
 
 namespace SSD_Components
@@ -16,7 +16,7 @@ namespace SSD_Components
         Flash_Mode_Controller(const sim_object_id_type& id, FTL*ftl,
 			Address_Mapping_Unit_Base* address_mapping_unit, Flash_Block_Manager_Base* block_manager, TSU_Base* tsu, NVM_PHY_ONFI* flash_controller,
 			unsigned int channel_count, unsigned int chip_no_per_channel, unsigned int die_no_per_chip, unsigned int plane_no_per_die,
-			unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int sector_no_per_page);
+			unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int sector_no_per_page, unsigned int initial_slc_block_per_plane);
 
         time_t getNextRequestTime();
 
@@ -24,6 +24,15 @@ namespace SSD_Components
         void Start_simulation();
         void Validate_simulation_config();
         void Execute_simulator_event(MQSimEngine::Sim_Event*);
+
+        int increaseSLCBlocks(const NVM::FlashMemory::Physical_Page_Address&,int);
+        int decreaseSLCBlocks(const NVM::FlashMemory::Physical_Page_Address&,int);
+        
+        void insertIntoSLCPool(PlaneBookKeepingType *);
+
+        void adjustPageCountStatistics(PlaneBookKeepingType *, unsigned int num_changed_block); //SLC로 전환함으로 인해 줄어드는 페이지 수 반영
+
+        const unsigned int initial_slc_block_per_plane;
 
     private:
         static Flash_Mode_Controller * _my_instance;
@@ -42,6 +51,8 @@ namespace SSD_Components
 		unsigned int block_no_per_plane;
 		unsigned int pages_no_per_block;
 		unsigned int sector_no_per_page;
+
+        
     };
 
 } //end of SSD_Components

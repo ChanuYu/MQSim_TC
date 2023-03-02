@@ -94,6 +94,7 @@ namespace SSD_Components
 		this->FMC = fmc;
 	}
 
+	//FTL에서 관리하는 개별 피지컬 블록에 대한 메타 데이터 초기화
 	void Block_Pool_Slot_Type::Erase()
 	{
 		Current_page_write_index = 0;

@@ -45,6 +45,9 @@ namespace SSD_Components
 		int Ongoing_user_read_count;
 		int Ongoing_user_program_count;
 		void Erase();
+		
+		//23.03.02
+		bool isSLC = false;
 	};
 
 	class PlaneBookKeepingType
@@ -54,8 +57,8 @@ namespace SSD_Components
 		unsigned int Free_pages_count;
 		unsigned int Valid_pages_count;
 		unsigned int Invalid_pages_count;
-		Block_Pool_Slot_Type* Blocks;
-		std::multimap<unsigned int, Block_Pool_Slot_Type*> Free_block_pool;
+		Block_Pool_Slot_Type* Blocks;  //모든 기본 플래시 모드(TLC) block
+		std::multimap<unsigned int, Block_Pool_Slot_Type*> Free_block_pool;		//기본 플래시 모드(TLC)인 Free block
 		Block_Pool_Slot_Type** Data_wf, ** GC_wf; //The write frontier blocks for data and GC pages. MQSim adopts Double Write Frontier approach for user and GC writes which is shown very advantages in: B. Van Houdt, "On the necessity of hot and cold data identification to reduce the write amplification in flash - based SSDs", Perf. Eval., 2014
 		Block_Pool_Slot_Type** Translation_wf; //The write frontier blocks for translation GC pages
 		std::queue<flash_block_ID_type> Block_usage_history;//A fifo queue that keeps track of flash blocks based on their usage history
@@ -64,6 +67,21 @@ namespace SSD_Components
 		unsigned int Get_free_block_pool_size();
 		void Check_bookkeeping_correctness(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		void Add_to_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl);
+
+		/**
+		 * 23.03.02
+		 * 기존의 Free_block_pool에 모든 free block이 들어있다 가정, Flash Mode Controller에 의해 SLC 영역 조정 (확대/축소)
+		 * 
+		*/
+		Block_Pool_Slot_Type* SLC_blocks;	//SLC 블록 영역
+		std::multimap<unsigned int, Block_Pool_Slot_Type *> Free_block_pool_slc;
+		Block_Pool_Slot_Type** Data_wf_slc, **GC_wf_slc;
+		Block_Pool_Slot_Type** Translation_wf_slc;
+
+		unsigned int getNumOfSLCBlocks();
+		void setNumOfSLCBlocks(unsigned int);
+	private:
+		unsigned int curNumOfSLCBlocks;
 	};
 
 	class Flash_Block_Manager_Base
