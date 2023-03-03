@@ -16,7 +16,6 @@ namespace SSD_Components
         return ftl->getNextRequestTime();
     }  
 
-
     void Flash_Mode_Controller::Start_simulation()
     {
         //plane별로 slc 영역 확보
@@ -46,7 +45,9 @@ namespace SSD_Components
             }
         }
     }
+
     void Flash_Mode_Controller::Validate_simulation_config() {}
+    
     void Flash_Mode_Controller::Execute_simulator_event(MQSimEngine::Sim_Event* ev) {}
 
 
