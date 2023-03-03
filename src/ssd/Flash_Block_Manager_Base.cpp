@@ -106,6 +106,9 @@ namespace SSD_Components
 		Stream_id = NO_STREAM;
 		Holds_mapping_data = false;
 		Erase_transaction = NULL;
+
+		//23.03.03
+		isSLC = false;
 	}
 
 	Block_Pool_Slot_Type* PlaneBookKeepingType::Get_a_free_block(stream_id_type stream_id, bool for_mapping_data)
@@ -139,6 +142,34 @@ namespace SSD_Components
 	}
 
 	void PlaneBookKeepingType::Add_to_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl)
+	{
+		if(block->isSLC)
+			Add_to_slc_free_block_pool(block,consider_dynamic_wl);
+		else
+			Add_to_tlc_free_block_pool(block,consider_dynamic_wl);
+	/*  23.03.02
+		if (consider_dynamic_wl) {
+			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(block->Erase_count, block);
+			Free_block_pool.insert(entry);
+		} else {
+			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(0, block);
+			Free_block_pool.insert(entry);
+		}
+	*/
+	}
+
+	void PlaneBookKeepingType::Add_to_slc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl)
+	{
+		if (consider_dynamic_wl) {
+			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(block->Erase_count, block);
+			Free_block_pool_slc.insert(entry);
+		} else {
+			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(0, block);
+			Free_block_pool_slc.insert(entry);
+		}
+	}
+
+	void PlaneBookKeepingType::Add_to_tlc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl)
 	{
 		if (consider_dynamic_wl) {
 			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(block->Erase_count, block);
@@ -246,5 +277,18 @@ namespace SSD_Components
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * 추가한 함수
+	*/
+	void PlaneBookKeepingType::setNumOfSLCBlocks(unsigned int num)
+	{
+		curNumOfSLCBlocks = num;
+	}
+
+	unsigned int PlaneBookKeepingType::getNumOfSLCBlocks()
+	{
+		return curNumOfSLCBlocks;
 	}
 }

@@ -67,6 +67,8 @@ namespace SSD_Components
 		unsigned int Get_free_block_pool_size();
 		void Check_bookkeeping_correctness(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		void Add_to_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl);
+		void Add_to_slc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl);
+		void Add_to_tlc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl);
 
 		/**
 		 * 23.03.02
