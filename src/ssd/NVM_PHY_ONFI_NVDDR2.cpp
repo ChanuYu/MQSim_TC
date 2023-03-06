@@ -129,6 +129,7 @@ namespace SSD_Components {
 	}
 	
 	//PHYSICAL FLASH MEMORY에 명령 전달
+	//SLC / TLC 구분하여 속도 조정
 	void NVM_PHY_ONFI_NVDDR2::Send_command_to_chip(std::list<NVM_Transaction_Flash*>& transaction_list)
 	{
 		ONFI_Channel_NVDDR2* target_channel = channels[transaction_list.front()->Address.ChannelID];

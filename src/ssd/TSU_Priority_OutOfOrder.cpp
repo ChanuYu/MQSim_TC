@@ -207,7 +207,7 @@ void TSU_Priority_OutOfOrder::Schedule()
         PRINT_ERROR("TSU_Priority_OutOfOrder: Illegal status!");
     }
 
-    if (transaction_receive_slots.size() == 0)
+    if (transaction_receive_slots.size() == 0) //SubmitTransaction(NVM_Transaction_Flash)에서 transaction_receive_slots에 트랜잭션을 푸쉬함
     {
         return;
     }

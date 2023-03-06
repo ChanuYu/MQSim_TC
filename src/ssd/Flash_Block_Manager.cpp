@@ -3,6 +3,8 @@
 #include "Flash_Block_Manager.h"
 #include "Stats.h"
 
+int count = 0;
+
 namespace SSD_Components
 {
 	Flash_Block_Manager::Flash_Block_Manager(GC_and_WL_Unit_Base* gc_and_wl_unit, unsigned int max_allowed_block_erase_count, unsigned int total_concurrent_streams_no,
@@ -31,8 +33,10 @@ namespace SSD_Components
 		page_address.PageID = plane_record->Data_wf[stream_id]->Current_page_write_index++;
 		program_transaction_issued(page_address);
 
+		//23.03.03
 		//The current write frontier block is written to the end
-		if(plane_record->Data_wf[stream_id]->Current_page_write_index == pages_no_per_block) {
+		//if(plane_record->Data_wf[stream_id]->Current_page_write_index == pages_no_per_block) {
+		if(plane_record->Data_wf[stream_id]->Current_page_write_index == plane_record->Data_wf[stream_id]->Last_page_index) {
 			//Assign a new write frontier block
 			plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false);
 			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address);
@@ -51,7 +55,7 @@ namespace SSD_Components
 
 		
 		//The current write frontier block is written to the end
-		if (plane_record->GC_wf[stream_id]->Current_page_write_index == pages_no_per_block) {
+		if (plane_record->GC_wf[stream_id]->Current_page_write_index == plane_record->Data_wf[stream_id]->Last_page_index) {
 			//Assign a new write frontier block
 			plane_record->GC_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false);
 			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address);
@@ -81,7 +85,8 @@ namespace SSD_Components
 
 		//Invalidate the remaining pages in the block
 		NVM::FlashMemory::Physical_Page_Address target_address(plane_address);
-		while (plane_record->Data_wf[stream_id]->Current_page_write_index < pages_no_per_block) {
+		//while (plane_record->Data_wf[stream_id]->Current_page_write_index < pages_no_per_block) {
+		while (plane_record->Data_wf[stream_id]->Current_page_write_index < plane_record->Data_wf[stream_id]->Last_page_index) {
 			plane_record->Free_pages_count--;
 			target_address.BlockID = plane_record->Data_wf[stream_id]->BlockID;
 			target_address.PageID = plane_record->Data_wf[stream_id]->Current_page_write_index++;
@@ -93,6 +98,7 @@ namespace SSD_Components
 		plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false);
 	}
 
+	//Allocate 시리즈 중에서 제일 먼저 호출됨
 	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_translation_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& page_address, bool is_for_gc)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];
@@ -103,7 +109,7 @@ namespace SSD_Components
 		program_transaction_issued(page_address);
 
 		//The current write frontier block for translation pages is written to the end
-		if (plane_record->Translation_wf[streamID]->Current_page_write_index == pages_no_per_block) {
+		if (plane_record->Translation_wf[streamID]->Current_page_write_index == plane_record->Data_wf[streamID]->Last_page_index) {
 			//Assign a new write frontier block
 			plane_record->Translation_wf[streamID] = plane_record->Get_a_free_block(streamID, true);
 			if (!is_for_gc) {

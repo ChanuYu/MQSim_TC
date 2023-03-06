@@ -9,6 +9,7 @@
 
 namespace SSD_Components
 {
+    enum class TransitionType {SLCTOTLC, TLCTOSLC};
 
     class Flash_Mode_Controller : public MQSimEngine::Sim_Object
     {
@@ -25,12 +26,14 @@ namespace SSD_Components
         void Validate_simulation_config();
         void Execute_simulator_event(MQSimEngine::Sim_Event*);
 
-        int increaseSLCBlocks(const NVM::FlashMemory::Physical_Page_Address&,int);
-        int decreaseSLCBlocks(const NVM::FlashMemory::Physical_Page_Address&,int);
+        void transformToSLC(Block_Pool_Slot_Type *);
+        int increaseSLCBlocks(PlaneBookKeepingType *,int);
+        int decreaseSLCBlocks(PlaneBookKeepingType *,int);
         
         void insertIntoSLCPool(PlaneBookKeepingType *);
 
-        void adjustPageCountStatistics(PlaneBookKeepingType *, unsigned int num_changed_block); //SLC로 전환함으로 인해 줄어드는 페이지 수 반영
+        inline int calculateNumChangedPages(int);
+        void adjustPageCountStatistics(PlaneBookKeepingType *, int, TransitionType); //SLC로 전환함으로 인해 줄어드는 페이지 수 반영
 
         const unsigned int initial_slc_block_per_plane;
         const bool consider_dynamic_wl;

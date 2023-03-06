@@ -48,6 +48,7 @@ namespace SSD_Components
 		
 		//23.03.02
 		bool isSLC = false;
+		flash_page_ID_type Last_page_index; //SLC로 조정한 경우 기존의 Current_page_write_index와 pages_no_per_block의 비교를 이 변수와의 비교로 바꿔야 함 
 	};
 
 	class PlaneBookKeepingType

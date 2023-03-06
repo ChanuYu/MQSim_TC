@@ -498,7 +498,7 @@ namespace SSD_Components
 			for (std::list<NVM_Transaction*>::const_iterator it = transactionList.begin();
 				it != transactionList.end(); it++) {
 				if (((NVM_Transaction_Flash*)(*it))->Physical_address_determined) {
-					ftl->TSU->Submit_transaction(static_cast<NVM_Transaction_Flash*>(*it));
+					ftl->TSU->Submit_transaction(static_cast<NVM_Transaction_Flash*>(*it)); //NVM_Transaction_Flash에는 Physical Address 멤버변수가 존재
 					if (((NVM_Transaction_Flash*)(*it))->Type == Transaction_Type::WRITE) {
 						if (((NVM_Transaction_Flash_WR*)(*it))->RelatedRead != NULL) {
 							ftl->TSU->Submit_transaction(((NVM_Transaction_Flash_WR*)(*it))->RelatedRead);
