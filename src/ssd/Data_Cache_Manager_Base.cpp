@@ -38,6 +38,7 @@ namespace SSD_Components
 		connected_user_request_serviced_signal_handlers.push_back(function);
 	}
 	
+	//Host_Interface쪽으로 전달
 	void Data_Cache_Manager_Base::broadcast_user_request_serviced_signal(User_Request* nvm_transaction)
 	{
 		for (std::vector<UserRequestServicedSignalHanderType>::iterator it = connected_user_request_serviced_signal_handlers.begin();

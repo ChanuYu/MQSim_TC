@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <cstring>
 
+#include "Host_Interface_SLC_Table.h"
+
 namespace Host_Components
 {
 	class PCIe_Switch;
@@ -138,6 +140,7 @@ namespace SSD_Components
 		Data_Cache_Manager_Base* cache;
 		std::vector<UserRequestArrivedSignalHandlerType> connected_user_request_arrived_signal_handlers;
 
+		SLC_Table *slc_table;
 		//Data_Cache_Manager 모듈로 전달
 		void broadcast_user_request_arrival_signal(User_Request* user_request)
 		{

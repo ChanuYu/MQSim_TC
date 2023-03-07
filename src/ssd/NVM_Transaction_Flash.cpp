@@ -3,6 +3,7 @@
 
 namespace SSD_Components
 {
+	//헤더파일에 isSLCTrx default 매개변수 값 설정
 	NVM_Transaction_Flash::NVM_Transaction_Flash(Transaction_Source_Type source, Transaction_Type type, stream_id_type stream_id,
 		unsigned int data_size_in_byte, LPA_type lpa, PPA_type ppa, User_Request* user_request, IO_Flow_Priority_Class::Priority priority_class, bool isSLCTrx) :
 		NVM_Transaction(stream_id, source, type, user_request, priority_class),

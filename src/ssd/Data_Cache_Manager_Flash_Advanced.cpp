@@ -184,6 +184,7 @@ namespace SSD_Components
 		}
 	}
 
+	//이 함수가 호출되기 전에 user_request에 transaction_list로 다 나눠져 있어야 함
 	void Data_Cache_Manager_Flash_Advanced::process_new_user_request(User_Request* user_request)
 	{
 		//This condition shouldn't happen, but we check it

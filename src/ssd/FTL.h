@@ -11,6 +11,8 @@
 #include "NVM_PHY_ONFI.h"
 #include "Stats.h"
 
+#include "Host_Interface_SLC_Table.h"
+
 /**
  * 수정계획: Flash_Mode_Controller 클래스 정의 및 기능 구현 완료 이후 변수 추가 및 생성자 수정
 */
@@ -54,6 +56,7 @@ namespace SSD_Components
 		TSU_Base * TSU;
 		NVM_PHY_ONFI* PHY;
 		Flash_Mode_Controller * FMC;
+		SLC_Table* slc_table;
 		void Report_results_in_XML(std::string name_prefix, Utils::XmlWriter& xmlwriter);
 	private:
 		unsigned int channel_no, chip_no_per_channel, die_no_per_chip, plane_no_per_die;

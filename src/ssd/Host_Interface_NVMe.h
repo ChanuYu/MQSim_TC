@@ -71,7 +71,7 @@ public:
 	void Fetch_write_data(User_Request *request);
 	void Send_read_data(User_Request *request);
 	void Send_completion_queue_element(User_Request *request, uint16_t sq_head_value);
-	void Process_pcie_write_message(uint64_t, void *, unsigned int);
+	void Process_pcie_write_message(uint64_t, void *, unsigned int); //updates submission queue and completion queue
 	void Process_pcie_read_message(uint64_t, void *, unsigned int);
 
 private:

@@ -18,7 +18,8 @@
 #include "Device_Parameter_Set.h"
 #include "IO_Flow_Parameter_Set.h"
 #include "../utils/Workload_Statistics.h"
-#include "../ssd/Flash_Mode_Controller.h"//
+#include "../ssd/Flash_Mode_Controller.h"
+#include "../ssd/Host_Interface_SLC_Table.h"
 
 /*********************************************************************************************************
 * An SSD device has the following components:
@@ -52,9 +53,9 @@ public:
 
 	unsigned int Channel_count;
 	unsigned int Chip_no_per_channel;
-
 private:
 	static SSD_Device * my_instance;//Used in static functions
+	SSD_Components::SLC_Table *_slc_table;
 };
 
 #endif //!SSD_DEVICE_H

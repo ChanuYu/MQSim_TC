@@ -22,7 +22,7 @@ namespace SSD_Components
 
 		sim_time_type STAT_InitiationTime;
 		sim_time_type STAT_ResponseTime;
-		std::list<NVM_Transaction*> Transaction_list;
+		std::list<NVM_Transaction*> Transaction_list; //<static_cast>(NVM_Transaction_Flash)로 전환해서 LPA 반환받기
 		unsigned int Sectors_serviced_from_cache;
 
 		unsigned int Size_in_byte;

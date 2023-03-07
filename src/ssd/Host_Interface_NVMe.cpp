@@ -66,6 +66,7 @@ inline void Input_Stream_Manager_NVMe::Completion_queue_head_pointer_update(stre
 	}
 }
 
+//Request_Fetch_Unit_NVMe::Process_pcie_read_message에서 호출
 inline void Input_Stream_Manager_NVMe::Handle_new_arrived_request(User_Request *request)
 {
 	((Input_Stream_NVMe *)input_streams[request->Stream_id])->Submission_head_informed_to_host++;
@@ -79,22 +80,21 @@ inline void Input_Stream_Manager_NVMe::Handle_new_arrived_request(User_Request *
 		((Input_Stream_NVMe *)input_streams[request->Stream_id])->STAT_number_of_read_requests++;
 		segment_user_request(request); 
 
-		((Host_Interface_NVMe *)host_interface)->broadcast_user_request_arrival_signal(request);
+		((Host_Interface_NVMe *)host_interface)->broadcast_user_request_arrival_signal(request); //DataCacheManager로 request 전달
 	}
 	else
 	{ //This is a write request
 		((Input_Stream_NVMe *)input_streams[request->Stream_id])->Waiting_user_requests.push_back(request);
 		((Input_Stream_NVMe *)input_streams[request->Stream_id])->STAT_number_of_write_requests++;
-		((Host_Interface_NVMe *)host_interface)->request_fetch_unit->Fetch_write_data(request);
+		((Host_Interface_NVMe *)host_interface)->request_fetch_unit->Fetch_write_data(request); //Request_Fetch_Unit_NVMe::dma_list에 dma item을 만들어서 추가한 후 호스트에 알림
 	}
 }
 
-//위의 Handle_new_arrived_request()내부의 Fetch_write_data()에서 dma list에 추가,
-//이후 Request_Fetch_Unit_NVMe::Process_pcie_read_message에서 호출
+//Request_Fetch_Unit_NVMe::Process_pcie_read_message에서 호출
 inline void Input_Stream_Manager_NVMe::Handle_arrived_write_data(User_Request *request)
 {
 	segment_user_request(request);
-	((Host_Interface_NVMe *)host_interface)->broadcast_user_request_arrival_signal(request);
+	((Host_Interface_NVMe *)host_interface)->broadcast_user_request_arrival_signal(request); //DataCacheManager로 request 전달
 }
 
 //리퀘스트를 처리한 이후 CQ에 넣으면서 호스트에 처리했음을 알림
@@ -179,7 +179,7 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 
 	page_status_type access_status_bitmap = 0;
 	unsigned int handled_sectors_count = 0;
-	unsigned int transaction_size = 0;
+	unsigned int transaction_size = 0; //섹터 단위
 	while (handled_sectors_count < req_size)
 	{
 		//Check if LSA is in the correct range allocated to the stream
@@ -187,8 +187,11 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		{
 			lsa = ((Input_Stream_NVMe *)input_streams[user_request->Stream_id])->Start_logical_sector_address + (lsa % (((Input_Stream_NVMe *)input_streams[user_request->Stream_id])->End_logical_sector_address - (((Input_Stream_NVMe *)input_streams[user_request->Stream_id])->Start_logical_sector_address)));
 		}
+
+		//offset in a input stream
 		LHA_type internal_lsa = lsa - ((Input_Stream_NVMe *)input_streams[user_request->Stream_id])->Start_logical_sector_address; //For each flow, all lsa's should be translated into a range starting from zero
 
+		//read/write operation의 단위가 하나의 페이지 단위이므로 그에 맞추기 위해 transaction size(섹터의 갯수)를 구함
 		transaction_size = host_interface->sectors_per_page - (unsigned int)(lsa % host_interface->sectors_per_page);
 		if (handled_sectors_count + transaction_size >= req_size)
 		{
@@ -199,6 +202,7 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		page_status_type temp = ~(0xffffffffffffffff << (int)transaction_size);
 		access_status_bitmap = temp << (int)(internal_lsa % host_interface->sectors_per_page);
 
+		//하나의 transaction은 페이지 사이즈를 넘지 않음
 		if (user_request->Type == UserRequestType::READ)
 		{
 			NVM_Transaction_Flash_RD *transaction = new NVM_Transaction_Flash_RD(Transaction_Source_Type::USERIO, user_request->Stream_id,
@@ -280,6 +284,7 @@ void Request_Fetch_Unit_NVMe::Process_pcie_write_message(uint64_t address, void 
 	}
 }
 
+//Host_Interface_Base::Consume_pcie_message(Host_Components::PCIe_Message* message)에서 process_pcie_read_message 호출
 void Request_Fetch_Unit_NVMe::Process_pcie_read_message(uint64_t address, void *payload, unsigned int payload_size)
 {
 	Host_Interface_NVMe *hi = (Host_Interface_NVMe *)host_interface;
@@ -338,6 +343,7 @@ void Request_Fetch_Unit_NVMe::Fetch_next_request(stream_id_type stream_id)
 	host_interface->Send_read_message_to_host(im->Submission_queue_base_address + im->Submission_head * sizeof(Submission_Queue_Entry), sizeof(Submission_Queue_Entry));
 }
 
+//Request_Fetch_Unit_NVMe::dma_list에 dma item을 만들어서 추가한 후 호스트에 알리는 역할
 void Request_Fetch_Unit_NVMe::Fetch_write_data(User_Request *request)
 {
 	DMA_Req_Item *dma_req_item = new DMA_Req_Item;

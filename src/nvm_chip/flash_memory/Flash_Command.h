@@ -37,6 +37,13 @@ namespace NVM
 			command_code_type CommandCode;
 			std::vector<Physical_Page_Address> Address;
 			std::vector<PageMetadata> Meta_data;
+
+			//23.03.06
+			bool is_slc() {return isSLC;}
+			void set_slc() {isSLC = true;}
+			Flash_Command(bool isSLCTrx=false):isSLC(isSLCTrx){}
+		private:
+			bool isSLC;
 		};
 	}
 }
