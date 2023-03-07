@@ -198,6 +198,16 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 			transaction_size = req_size - handled_sectors_count;
 		}
 		LPA_type lpa = internal_lsa / host_interface->sectors_per_page;
+		
+		/* 23.03.07 slc map table 동작 확인
+		if(lpa==0)
+		{
+			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
+			std::cout<<(*p_table)->isLPAEntrySLC(lpa)<<std::endl;
+		}
+		*/
+			
+		bool isTrxSLC = (*p_table)->isLPAEntrySLC(lpa);
 
 		page_status_type temp = ~(0xffffffffffffffff << (int)transaction_size);
 		access_status_bitmap = temp << (int)(internal_lsa % host_interface->sectors_per_page);
@@ -392,6 +402,11 @@ Host_Interface_NVMe::Host_Interface_NVMe(const sim_object_id_type &id,
 																																									   submission_queue_depth(submission_queue_depth), completion_queue_depth(completion_queue_depth), no_of_input_streams(no_of_input_streams)
 {
 	this->input_stream_manager = new Input_Stream_Manager_NVMe(this, queue_fetch_size);
+
+	//수정 23.03.07
+	slc_table = NULL;
+	this->input_stream_manager->p_table = &slc_table;
+
 	this->request_fetch_unit = new Request_Fetch_Unit_NVMe(this);
 }
 

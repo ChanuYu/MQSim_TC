@@ -16,17 +16,18 @@
 //#include "Address_Mapping_Unit_Page_Level.h"
 namespace SSD_Components
 {
-class SLC_Table
-{
-public:
-    SLC_Table(LPA_type total_capacity);
-    ~SLC_Table();
+    class SLC_Table
+    {
+    public:
+        SLC_Table(LPA_type total_capacity);
+        ~SLC_Table();
 
-    bool *table; //multi stream이 아닌 단일 스트림을 가정하고 개발
-    bool isLPAInSLCBlock(const LPA_type &lpa);
-private:
-    LPA_type total_capacity_in_page_unit;
-};
+        bool *map_table; //multi stream이 아닌 단일 스트림을 가정
+        bool isLPAEntrySLC(const LPA_type &lpa);
+        void changeEntryModeTo(const LPA_type &lpa,Flash_Technology_Type type);
+    private:
+        LPA_type total_capacity_in_page_unit;
+    };
 }
 
 

@@ -135,13 +135,6 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		//IO_Flow_Base를 위한 ftl 포인터 - 23.02.27
 		p_firmware = ftl;
 
-		//slc table 생성 - 23.03.07
-		LPA_type total_capacity = parameters->Flash_Channel_Count * parameters->Chip_No_Per_Channel * parameters->Flash_Parameters.Die_No_Per_Chip * parameters->Flash_Parameters.Plane_No_Per_Die *
-								  parameters->Flash_Parameters.Block_No_Per_Plane * parameters->Flash_Parameters.Page_No_Per_Block;
-		_slc_table = new SSD_Components::SLC_Table(total_capacity);
-		ftl->slc_table = _slc_table;
-		
-
 		//Step 5: create TSU
 		SSD_Components::TSU_Base *tsu;
 		bool erase_suspension = false, program_suspension = false;
@@ -399,6 +392,13 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		}
 		Simulator->AddObject(device->Host_interface);
 		dcm->Set_host_interface(device->Host_interface);
+
+		//slc table 생성 - 23.03.07
+		LPA_type total_capacity = parameters->Flash_Channel_Count * parameters->Chip_No_Per_Channel * parameters->Flash_Parameters.Die_No_Per_Chip * parameters->Flash_Parameters.Plane_No_Per_Die *
+								  parameters->Flash_Parameters.Block_No_Per_Plane * parameters->Flash_Parameters.Page_No_Per_Block;
+		_slc_table = new SSD_Components::SLC_Table(total_capacity);
+		ftl->slc_table = _slc_table;
+		device->Host_interface->slc_table = _slc_table;
 		break;
 	}
 	default:

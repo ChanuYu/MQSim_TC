@@ -50,6 +50,9 @@ namespace SSD_Components
 		friend class Request_Fetch_Unit_NVMe;
 		friend class Request_Fetch_Unit_SATA;
 	public:
+		//수정 - 23.03.07
+		SLC_Table **p_table;
+
 		Input_Stream_Manager_Base(Host_Interface_Base* host_interface);
 		virtual ~Input_Stream_Manager_Base();
 		virtual void Handle_new_arrived_request(User_Request* request) = 0;
@@ -123,6 +126,8 @@ namespace SSD_Components
 			delete message;
 		}
 	
+		SLC_Table *slc_table;
+
 		void Send_read_message_to_host(uint64_t addresss, unsigned int request_read_data_size);
 		void Send_write_message_to_host(uint64_t addresss, void* message, unsigned int message_size);
 
@@ -140,7 +145,7 @@ namespace SSD_Components
 		Data_Cache_Manager_Base* cache;
 		std::vector<UserRequestArrivedSignalHandlerType> connected_user_request_arrived_signal_handlers;
 
-		SLC_Table *slc_table;
+		
 		//Data_Cache_Manager 모듈로 전달
 		void broadcast_user_request_arrival_signal(User_Request* user_request)
 		{

@@ -171,9 +171,9 @@ namespace SSD_Components {
 
 		//트랜잭션별로 Address, Meta_data(LPA) 정보를 die book keeping entry에 담아서 추가
 		dieBKE->Free = false;
-		
+
 		/**
-		 * 수정계획: User Request -> Transaction Unit으로 전환하는데 모든 트랜잭션이 동일한 LPA인 것은 아님
+		 * 수정계획: User Request -> Transaction Unit으로 전환하는데 모든 트랜잭션이 동일한 블록에 존재하지 않을 수도 있음
 		 * Flash_Command에 넣는 방식은 개별 트랜잭션의 상이한 플래시 상태를 반영하지 못함
 		*/
 		dieBKE->ActiveCommand = new NVM::FlashMemory::Flash_Command(transaction_list.front()->is_slc()); //전체 파일에서 여기서만 Flash_Command 객체 생성
