@@ -199,7 +199,8 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		}
 		LPA_type lpa = internal_lsa / host_interface->sectors_per_page;
 		
-		/* 23.03.07 slc map table 동작 확인
+		/**
+		 * 23.03.07 slc map table 동작 확인
 		if(lpa==0)
 		{
 			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
@@ -207,7 +208,7 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		}
 		*/
 			
-		bool isTrxSLC = (*p_table)->isLPAEntrySLC(lpa);
+		bool isSLCTrx = (*p_table)->isLPAEntrySLC(lpa);
 
 		page_status_type temp = ~(0xffffffffffffffff << (int)transaction_size);
 		access_status_bitmap = temp << (int)(internal_lsa % host_interface->sectors_per_page);
@@ -216,14 +217,14 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		if (user_request->Type == UserRequestType::READ)
 		{
 			NVM_Transaction_Flash_RD *transaction = new NVM_Transaction_Flash_RD(Transaction_Source_Type::USERIO, user_request->Stream_id,
-																				 transaction_size * SECTOR_SIZE_IN_BYTE, lpa, NO_PPA, user_request, user_request->Priority_class, 0, access_status_bitmap, CurrentTimeStamp);
+																				 transaction_size * SECTOR_SIZE_IN_BYTE, lpa, NO_PPA, user_request, user_request->Priority_class, 0, access_status_bitmap, CurrentTimeStamp,isSLCTrx);
 			user_request->Transaction_list.push_back(transaction);
 			input_streams[user_request->Stream_id]->STAT_number_of_read_transactions++;
 		}
 		else
 		{ //user_request->Type == UserRequestType::WRITE
 			NVM_Transaction_Flash_WR *transaction = new NVM_Transaction_Flash_WR(Transaction_Source_Type::USERIO, user_request->Stream_id,
-																				 transaction_size * SECTOR_SIZE_IN_BYTE, lpa, user_request, user_request->Priority_class, 0, access_status_bitmap, CurrentTimeStamp);
+																				 transaction_size * SECTOR_SIZE_IN_BYTE, lpa, user_request, user_request->Priority_class, 0, access_status_bitmap, CurrentTimeStamp,isSLCTrx);
 			user_request->Transaction_list.push_back(transaction);
 			input_streams[user_request->Stream_id]->STAT_number_of_write_transactions++;
 		}
