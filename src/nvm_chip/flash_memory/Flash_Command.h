@@ -39,11 +39,11 @@ namespace NVM
 			std::vector<PageMetadata> Meta_data;
 
 			//23.03.06
-			bool is_slc() {return isSLC;}
-			void set_slc() {isSLC = true;}
-			Flash_Command(bool isSLCTrx=false):isSLC(isSLCTrx){}
+			bool is_slc() {return is_all_trx_slc;}
+			void set_slc() {is_all_trx_slc = true;}
+			Flash_Command(bool is_all_trx_slc=false):is_all_trx_slc(is_all_trx_slc){}
 		private:
-			bool isSLC;
+			bool is_all_trx_slc;
 		};
 	}
 }

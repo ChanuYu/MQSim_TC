@@ -130,8 +130,8 @@ namespace SSD_Components {
 
 	bool NVM_PHY_ONFI_NVDDR2::isAllTrxSLC(std::list<NVM_Transaction_Flash*>& transaction_list)
 	{
-		std::list<NVM_Transaction_Flash*>::iterator iter;
-		for(iter=transaction_list.begin();iter!=transaction_list.end();++iter)
+		std::list<NVM_Transaction_Flash*>::iterator iter = transaction_list.begin();
+		for(;iter!=transaction_list.end();iter++)
 		{
 			if(!(*iter)->is_slc())
 				return false;
@@ -185,12 +185,11 @@ namespace SSD_Components {
 		dieBKE->Free = false;
 
 		/**
-		 * 수정계획: User Request -> Transaction Unit으로 전환하는데 모든 트랜잭션이 동일한 블록에 존재하지 않을 수도 있음
-		 * Flash_Command에 넣는 방식은 개별 트랜잭션의 상이한 플래시 상태를 반영하지 못함
+		 * 수정 - 23.03.08
+		 * 트랜잭션 리스트의 엔트리가 두 개 이상인 경우 멀티 플레인 커맨드로 수행
 		*/
-		//transaction_list에 대하여 리스트 내에 slc transaction만 있는지 아니면 tlc도 섞여 있는지 확인하는 함수 만들고
-		bool allTrxIsSLC = isAllTrxSLC(transaction_list);
-		dieBKE->ActiveCommand = new NVM::FlashMemory::Flash_Command(transaction_list.front()->is_slc()); //전체 파일에서 여기서만 Flash_Command 객체 생성
+		bool is_all_trx_slc = isAllTrxSLC(transaction_list);
+		dieBKE->ActiveCommand = new NVM::FlashMemory::Flash_Command(is_all_trx_slc); //전체 파일에서 여기서만 Flash_Command 객체 생성
 		for (std::list<NVM_Transaction_Flash*>::iterator it = transaction_list.begin();
 			it != transaction_list.end(); it++) {
 			dieBKE->ActiveTransactions.push_back(*it);
@@ -208,28 +207,34 @@ namespace SSD_Components {
 					dieBKE->ActiveCommand->CommandCode = CMD_READ_PAGE;
 					DEBUG("Chip " << targetChip->ChannelID << ", " << targetChip->ChipID << ", " << transaction_list.front()->Address.DieID << ": Sending read command to chip for LPA: " << transaction_list.front()->LPA)
 				} else {
+					//멀티 플레인 커맨드
 					Stats::IssuedMultiplaneReadCMD++;
 					dieBKE->ActiveCommand->CommandCode = CMD_READ_PAGE_MULTIPLANE;
 					DEBUG("Chip " << targetChip->ChannelID << ", " << targetChip->ChipID << ", " << transaction_list.front()->Address.DieID << ": Sending multi-plane read command to chip for LPA: " << transaction_list.front()->LPA)
 				}
 
-				//멀티 플레인의 경우 transfer time이 더 길어지는 것을 반영
+				//멀티 플레인의 경우 transfer time이 더 길어지는 것을 stat에 반영
 				for (std::list<NVM_Transaction_Flash*>::iterator it = transaction_list.begin();
 					it != transaction_list.end(); it++) {
 					(*it)->STAT_transfer_time += target_channel->ReadCommandTime[transaction_list.size()]; //read commmand 전송 시간 => SLC/TLC 데이터 읽어들이는 시간이 아님
 				}
+
+				//die로 커맨드를 전송 중인 것을 OngoingDieCMDTransfers에 저장함
 				if (chipBKE->OngoingDieCMDTransfers.size() == 0) {
+					//이전에 다이로 전송했던 커맨드가 다 처리 됨
 					targetChip->StartCMDXfer();
 					chipBKE->Status = ChipStatus::CMD_IN;
 					chipBKE->Last_transfer_finish_time = Simulator->Time() + suspendTime + target_channel->ReadCommandTime[transaction_list.size()];
 					Simulator->Register_sim_event(Simulator->Time() + suspendTime + target_channel->ReadCommandTime[transaction_list.size()], this,
 						dieBKE, (int)NVDDR2_SimEventType::READ_CMD_ADDR_TRANSFERRED);
 				} else {
+					//이전에 다이로 보낸 커맨드를 아직 전송 중에 있음
 					dieBKE->DieInterleavedTime = suspendTime + target_channel->ReadCommandTime[transaction_list.size()];
 					chipBKE->Last_transfer_finish_time += suspendTime + target_channel->ReadCommandTime[transaction_list.size()];
 				}
-				chipBKE->OngoingDieCMDTransfers.push(dieBKE);
+				chipBKE->OngoingDieCMDTransfers.push(dieBKE); //전송 중인 커맨드 리스트에 추가
 
+				//DieBookKeepingEntry::Expected_finish_time 외에 ChipBookKeepingEntry::Expected_command_exec_finish_time도 조정해야 함
 				dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand->CommandCode, dieBKE->ActiveCommand->Address[0].PageID);
 				if (chipBKE->Expected_command_exec_finish_time < dieBKE->Expected_finish_time) {
 					chipBKE->Expected_command_exec_finish_time = dieBKE->Expected_finish_time;

@@ -10,6 +10,12 @@ class Flash_Parameter_Set : Parameter_Set_Base
 public:
 	static Flash_Technology_Type Flash_Technology;
 	static NVM::FlashMemory::Command_Suspension_Mode CMD_Suspension_Support;
+	static sim_time_type SLC_Program_Latency;
+	static sim_time_type SLC_Read_Latency;
+	static sim_time_type SLC_Erase_Latency;
+	static sim_time_type TLC_Program_Latency;
+	static sim_time_type TLC_Read_Latency;
+	static sim_time_type TLC_Erase_Latency;
 	static sim_time_type Page_Read_Latency_LSB;
 	static sim_time_type Page_Read_Latency_CSB;
 	static sim_time_type Page_Read_Latency_MSB;

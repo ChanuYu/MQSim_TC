@@ -5,6 +5,12 @@
 
 Flash_Technology_Type Flash_Parameter_Set::Flash_Technology = Flash_Technology_Type::MLC;
 NVM::FlashMemory::Command_Suspension_Mode Flash_Parameter_Set::CMD_Suspension_Support = NVM::FlashMemory::Command_Suspension_Mode::ERASE;
+sim_time_type Flash_Parameter_Set::SLC_Program_Latency = 160000;
+sim_time_type Flash_Parameter_Set::SLC_Read_Latency = 30000;
+sim_time_type Flash_Parameter_Set::SLC_Erase_Latency = 3000000;
+sim_time_type Flash_Parameter_Set::TLC_Program_Latency = 730000;
+sim_time_type Flash_Parameter_Set::TLC_Read_Latency = 66000;
+sim_time_type Flash_Parameter_Set::TLC_Erase_Latency = 4800000;
 sim_time_type Flash_Parameter_Set::Page_Read_Latency_LSB = 75000;
 sim_time_type Flash_Parameter_Set::Page_Read_Latency_CSB = 75000;
 sim_time_type Flash_Parameter_Set::Page_Read_Latency_MSB = 75000;
@@ -62,6 +68,30 @@ void Flash_Parameter_Set::XML_serialize(Utils::XmlWriter& xmlwriter)
 		default:
 			break;
 	}
+	xmlwriter.Write_attribute_string(attr, val);
+
+	attr = "SLC_Program_Latency";
+	val = std::to_string(SLC_Program_Latency);
+	xmlwriter.Write_attribute_string(attr, val);
+
+	attr = "SLC_Read_Latency";
+	val = std::to_string(SLC_Read_Latency);
+	xmlwriter.Write_attribute_string(attr, val);
+
+	attr = "SLC_Erase_Latency";
+	val = std::to_string(SLC_Erase_Latency);
+	xmlwriter.Write_attribute_string(attr, val);
+
+	attr = "TLC_Program_Latency";
+	val = std::to_string(TLC_Program_Latency);
+	xmlwriter.Write_attribute_string(attr, val);
+
+	attr = "TLC_Read_Latency";
+	val = std::to_string(TLC_Read_Latency);
+	xmlwriter.Write_attribute_string(attr, val);
+
+	attr = "TLC_Erase_Latency";
+	val = std::to_string(TLC_Erase_Latency);
 	xmlwriter.Write_attribute_string(attr, val);
 
 	attr = "Page_Read_Latency_LSB";
@@ -159,7 +189,25 @@ void Flash_Parameter_Set::XML_deserialize(rapidxml::xml_node<> *node)
 				} else {
 					PRINT_ERROR("Unknown command suspension type specified in the input file")
 				}
-			} else if (strcmp(param->name(), "Page_Read_Latency_LSB") == 0) {
+			} else if (strcmp(param->name(), "SLC_Program_Latency") == 0) {
+				std::string val = param->value();
+				SLC_Program_Latency = std::stoull(val);
+			}else if (strcmp(param->name(), "SLC_Read_Latency") == 0) {
+				std::string val = param->value();
+				SLC_Read_Latency = std::stoull(val);
+			}else if (strcmp(param->name(), "SLC_Erase_Latency") == 0) {
+				std::string val = param->value();
+				SLC_Erase_Latency = std::stoull(val);
+			} else if (strcmp(param->name(), "TLC_Program_Latency") == 0) {
+				std::string val = param->value();
+				TLC_Program_Latency = std::stoull(val);
+			}else if (strcmp(param->name(), "TLC_Read_Latency") == 0) {
+				std::string val = param->value();
+				TLC_Read_Latency = std::stoull(val);
+			}else if (strcmp(param->name(), "TLC_Erase_Latency") == 0) {
+				std::string val = param->value();
+				TLC_Erase_Latency = std::stoull(val);
+			}else if (strcmp(param->name(), "Page_Read_Latency_LSB") == 0) {
 				std::string val = param->value();
 				Page_Read_Latency_LSB = std::stoull(val);
 			} else if (strcmp(param->name(), "Page_Read_Latency_CSB") == 0) {

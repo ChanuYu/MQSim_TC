@@ -92,6 +92,40 @@ namespace NVM
 					latencyType = (pageID <= 5) ? 0 : ((pageID <= 7) ? 1 : (((pageID - 8) >> 1) % 3));;
 				}
 
+
+				//ECC를 반영한 레이턴시 계산
+				switch (CMDCode)
+				{
+					case CMD_READ_PAGE:
+					case CMD_READ_PAGE_MULTIPLANE:
+					case CMD_READ_PAGE_COPYBACK:
+					case CMD_READ_PAGE_COPYBACK_MULTIPLANE:
+						return _readLatency[latencyType] + _RBSignalDelayRead;
+					case CMD_PROGRAM_PAGE:
+					case CMD_PROGRAM_PAGE_MULTIPLANE:
+					case CMD_PROGRAM_PAGE_COPYBACK:
+					case CMD_PROGRAM_PAGE_COPYBACK_MULTIPLANE:
+						return _programLatency[latencyType] + _RBSignalDelayWrite;
+					case CMD_ERASE_BLOCK:
+					case CMD_ERASE_BLOCK_MULTIPLANE:
+						return _eraseLatency + _RBSignalDelayErase;
+					default:
+						throw std::invalid_argument("Unsupported command for flash chip.");
+				}
+			}
+
+			sim_time_type Get_command_execution_latency(Flash_Command* command)
+			{
+				command_code_type CMDCode = command->CommandCode;
+				flash_page_ID_type pageID = command->Address[0].PageID; //첫 번째 트랜잭션의 pageID
+
+				int latencyType = 0;
+				if (flash_technology == Flash_Technology_Type::MLC) {
+					latencyType = pageID % 2;
+				} else if (flash_technology == Flash_Technology_Type::TLC) {
+					latencyType = (pageID <= 5) ? 0 : ((pageID <= 7) ? 1 : (((pageID - 8) >> 1) % 3));;
+				}
+
 				switch (CMDCode)
 				{
 					case CMD_READ_PAGE:
@@ -142,6 +176,41 @@ namespace NVM
 			void broadcast_ready_signal(Flash_Command* command);
 			std::vector<ChipReadySignalHandlerType> connectedReadyHandlers;
 		};
+		/*
+		switch (parameters->Flash_Parameters.Flash_Technology)
+		{
+		case Flash_Technology_Type::SLC:
+			read_latencies = new sim_time_type[1];
+			read_latencies[0] = parameters->Flash_Parameters.Page_Read_Latency_LSB;
+			write_latencies = new sim_time_type[1];
+			write_latencies[0] = parameters->Flash_Parameters.Page_Program_Latency_LSB;
+			average_flash_read_latency = read_latencies[0];
+			average_flash_write_latency = write_latencies[0];
+			break;
+		case Flash_Technology_Type::MLC:
+			read_latencies = new sim_time_type[2];
+			read_latencies[0] = parameters->Flash_Parameters.Page_Read_Latency_LSB;
+			read_latencies[1] = parameters->Flash_Parameters.Page_Read_Latency_MSB;
+			write_latencies = new sim_time_type[2];
+			write_latencies[0] = parameters->Flash_Parameters.Page_Program_Latency_LSB;
+			write_latencies[1] = parameters->Flash_Parameters.Page_Program_Latency_MSB;
+			average_flash_read_latency = (read_latencies[0] + read_latencies[1]) / 2;
+			average_flash_write_latency = (write_latencies[0] + write_latencies[1]) / 2;
+			break;
+		case Flash_Technology_Type::TLC:
+			read_latencies = new sim_time_type[3];
+			read_latencies[0] = parameters->Flash_Parameters.Page_Read_Latency_LSB;
+			read_latencies[1] = parameters->Flash_Parameters.Page_Read_Latency_CSB;
+			read_latencies[2] = parameters->Flash_Parameters.Page_Read_Latency_MSB;
+			write_latencies = new sim_time_type[3];
+			write_latencies[0] = parameters->Flash_Parameters.Page_Program_Latency_LSB;
+			write_latencies[1] = parameters->Flash_Parameters.Page_Program_Latency_CSB;
+			write_latencies[2] = parameters->Flash_Parameters.Page_Program_Latency_MSB;
+			average_flash_read_latency = (read_latencies[0] + read_latencies[1] + read_latencies[2]) / 3;
+			average_flash_write_latency = (write_latencies[0] + write_latencies[1] + write_latencies[2]) / 3;
+			break;
+		}
+		*/
 	}
 }
 
