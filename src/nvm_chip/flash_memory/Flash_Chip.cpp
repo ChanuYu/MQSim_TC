@@ -12,14 +12,18 @@ namespace NVM
 			unsigned int dieNo, unsigned int PlaneNoPerDie, unsigned int Block_no_per_plane, unsigned int Page_no_per_block,
 			sim_time_type* readLatency, sim_time_type* programLatency, sim_time_type eraseLatency,
 			sim_time_type suspendProgramLatency, sim_time_type suspendEraseLatency,
-			sim_time_type commProtocolDelayRead, sim_time_type commProtocolDelayWrite, sim_time_type commProtocolDelayErase)
+			sim_time_type commProtocolDelayRead, sim_time_type commProtocolDelayWrite, sim_time_type commProtocolDelayErase,
+			sim_time_type slc_read_latency, sim_time_type slc_program_latency, sim_time_type slc_erase_latency,
+			sim_time_type tlc_read_latency, sim_time_type tlc_program_latency, sim_time_type tlc_erase_latency)
 			: NVM_Chip(id), ChannelID(channelID), ChipID(localChipID), flash_technology(flash_technology),
 			status(Internal_Status::IDLE), die_no(dieNo), plane_no_in_die(PlaneNoPerDie), block_no_in_plane(Block_no_per_plane), page_no_per_block(Page_no_per_block),
 			_RBSignalDelayRead(commProtocolDelayRead), _RBSignalDelayWrite(commProtocolDelayWrite), _RBSignalDelayErase(commProtocolDelayErase),
 			lastTransferStart(INVALID_TIME), executionStartTime(INVALID_TIME), expectedFinishTime(INVALID_TIME),
 			STAT_readCount(0), STAT_progamCount(0), STAT_eraseCount(0),
 			STAT_totalSuspensionCount(0), STAT_totalResumeCount(0),
-			STAT_totalExecTime(0), STAT_totalXferTime(0), STAT_totalOverlappedXferExecTime(0)
+			STAT_totalExecTime(0), STAT_totalXferTime(0), STAT_totalOverlappedXferExecTime(0),
+			slc_read_latency(slc_read_latency), slc_program_latency(slc_program_latency),slc_erase_latency(slc_erase_latency),
+			tlc_read_latency(tlc_read_latency), tlc_program_latency(tlc_program_latency),tlc_erase_latency(tlc_erase_latency)
 		{
 			int bits_per_cell = static_cast<int>(flash_technology);
 			_readLatency = new sim_time_type[bits_per_cell];

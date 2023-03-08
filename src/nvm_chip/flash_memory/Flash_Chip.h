@@ -26,7 +26,9 @@ namespace NVM
 				unsigned int dieNo, unsigned int PlaneNoPerDie, unsigned int Block_no_per_plane, unsigned int Page_no_per_block,
 				sim_time_type *readLatency, sim_time_type *programLatency, sim_time_type eraseLatency,
 				sim_time_type suspendProgramLatency, sim_time_type suspendEraseLatency,
-				sim_time_type commProtocolDelayRead = 20, sim_time_type commProtocolDelayWrite = 0, sim_time_type commProtocolDelayErase = 0);
+				sim_time_type commProtocolDelayRead = 20, sim_time_type commProtocolDelayWrite = 0, sim_time_type commProtocolDelayErase = 0,
+				sim_time_type slc_read_latency = 30000, sim_time_type slc_program_latency = 160000, sim_time_type slc_erase_latency = 3000000,
+				sim_time_type tlc_read_latency = 66000, sim_time_type tlc_program_latency = 730000, sim_time_type tlc_erase_latency = 4800000);
 			~Flash_Chip();
 			flash_channel_ID_type ChannelID;
 			flash_chip_ID_type ChipID;         //Flashchip position in its related channel
@@ -92,7 +94,6 @@ namespace NVM
 					latencyType = (pageID <= 5) ? 0 : ((pageID <= 7) ? 1 : (((pageID - 8) >> 1) % 3));;
 				}
 
-
 				//ECC를 반영한 레이턴시 계산
 				switch (CMDCode)
 				{
@@ -119,12 +120,14 @@ namespace NVM
 				command_code_type CMDCode = command->CommandCode;
 				flash_page_ID_type pageID = command->Address[0].PageID; //첫 번째 트랜잭션의 pageID
 
+
 				int latencyType = 0;
 				if (flash_technology == Flash_Technology_Type::MLC) {
 					latencyType = pageID % 2;
 				} else if (flash_technology == Flash_Technology_Type::TLC) {
 					latencyType = (pageID <= 5) ? 0 : ((pageID <= 7) ? 1 : (((pageID - 8) >> 1) % 3));;
 				}
+
 
 				switch (CMDCode)
 				{
@@ -160,7 +163,9 @@ namespace NVM
 			unsigned int die_no;
 			unsigned int plane_no_in_die;                  //indicate how many planes in a die
 			unsigned int block_no_in_plane;                //indicate how many blocks in a plane
-			unsigned int page_no_per_block;                 //indicate how many pages in a block
+			unsigned int page_no_per_block;                //indicate how many pages in a block
+			sim_time_type slc_read_latency, slc_program_latency, slc_erase_latency;
+			sim_time_type tlc_read_latency, tlc_program_latency, tlc_erase_latency;
 			sim_time_type *_readLatency, *_programLatency, _eraseLatency;
 			sim_time_type _suspendProgramLatency, _suspendEraseLatency;
 			sim_time_type _RBSignalDelayRead, _RBSignalDelayWrite, _RBSignalDelayErase;
