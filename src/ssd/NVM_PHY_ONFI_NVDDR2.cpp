@@ -127,6 +127,18 @@ namespace SSD_Components {
 	{
 		channels[page_address.ChannelID]->Chips[page_address.ChipID]->Change_memory_status_preconditioning(&page_address, &lpa);
 	}
+
+	bool NVM_PHY_ONFI_NVDDR2::isAllTrxSLC(std::list<NVM_Transaction_Flash*>& transaction_list)
+	{
+		std::list<NVM_Transaction_Flash*>::iterator iter;
+		for(iter=transaction_list.begin();iter!=transaction_list.end();++iter)
+		{
+			if(!(*iter)->is_slc())
+				return false;
+		}
+
+		return true;
+	}
 	
 	//PHYSICAL FLASH MEMORY에 명령 전달
 	//SLC / TLC 구분하여 속도 조정
@@ -176,6 +188,8 @@ namespace SSD_Components {
 		 * 수정계획: User Request -> Transaction Unit으로 전환하는데 모든 트랜잭션이 동일한 블록에 존재하지 않을 수도 있음
 		 * Flash_Command에 넣는 방식은 개별 트랜잭션의 상이한 플래시 상태를 반영하지 못함
 		*/
+		//transaction_list에 대하여 리스트 내에 slc transaction만 있는지 아니면 tlc도 섞여 있는지 확인하는 함수 만들고
+		bool allTrxIsSLC = isAllTrxSLC(transaction_list);
 		dieBKE->ActiveCommand = new NVM::FlashMemory::Flash_Command(transaction_list.front()->is_slc()); //전체 파일에서 여기서만 Flash_Command 객체 생성
 		for (std::list<NVM_Transaction_Flash*>::iterator it = transaction_list.begin();
 			it != transaction_list.end(); it++) {

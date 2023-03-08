@@ -202,11 +202,10 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		/**
 		 * 23.03.07 slc map table 동작 확인
 		if(lpa==0)
-		{
 			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
-			std::cout<<(*p_table)->isLPAEntrySLC(lpa)<<std::endl;
-		}
 		*/
+		if(lpa==0)
+			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
 			
 		bool isSLCTrx = (*p_table)->isLPAEntrySLC(lpa);
 

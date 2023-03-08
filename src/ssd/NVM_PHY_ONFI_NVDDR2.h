@@ -108,6 +108,10 @@ namespace SSD_Components
 		NVM_Transaction_Flash* Is_chip_busy_with_stream(NVM_Transaction_Flash* transaction);
 		bool Is_chip_busy(NVM_Transaction_Flash* transaction);
 		void Change_memory_status_preconditioning(const NVM::NVM_Memory_Address* address, const void* status_info);
+
+		//23.03.08
+		bool isAllTrxSLC(std::list<NVM_Transaction_Flash*>&);
+
 	private:
 		void transfer_read_data_from_chip(ChipBookKeepingEntry* chipBKE, DieBookKeepingEntry* dieBKE, NVM_Transaction_Flash* tr);
 		void perform_interleaved_cmd_data_transfer(NVM::FlashMemory::Flash_Chip* chip, DieBookKeepingEntry* bookKeepingEntry);
