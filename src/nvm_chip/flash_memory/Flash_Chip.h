@@ -118,16 +118,20 @@ namespace NVM
 			sim_time_type Get_command_execution_latency(Flash_Command* command)
 			{
 				command_code_type CMDCode = command->CommandCode;
-				flash_page_ID_type pageID = command->Address[0].PageID; //첫 번째 트랜잭션의 pageID
+				sim_time_type read_time, program_time, erase_time;
 
-
-				int latencyType = 0;
-				if (flash_technology == Flash_Technology_Type::MLC) {
-					latencyType = pageID % 2;
-				} else if (flash_technology == Flash_Technology_Type::TLC) {
-					latencyType = (pageID <= 5) ? 0 : ((pageID <= 7) ? 1 : (((pageID - 8) >> 1) % 3));;
+				if(command->is_slc())
+				{
+					read_time = slc_read_latency;
+					program_time = slc_program_latency;
+					erase_time = slc_erase_latency;
 				}
-
+				else
+				{
+					read_time = tlc_read_latency;
+					program_time = tlc_program_latency;
+					erase_time = tlc_erase_latency;
+				}
 
 				switch (CMDCode)
 				{
@@ -135,15 +139,15 @@ namespace NVM
 					case CMD_READ_PAGE_MULTIPLANE:
 					case CMD_READ_PAGE_COPYBACK:
 					case CMD_READ_PAGE_COPYBACK_MULTIPLANE:
-						return _readLatency[latencyType] + _RBSignalDelayRead;
+						return read_time + _RBSignalDelayRead;
 					case CMD_PROGRAM_PAGE:
 					case CMD_PROGRAM_PAGE_MULTIPLANE:
 					case CMD_PROGRAM_PAGE_COPYBACK:
 					case CMD_PROGRAM_PAGE_COPYBACK_MULTIPLANE:
-						return _programLatency[latencyType] + _RBSignalDelayWrite;
+						return program_time + _RBSignalDelayWrite;
 					case CMD_ERASE_BLOCK:
 					case CMD_ERASE_BLOCK_MULTIPLANE:
-						return _eraseLatency + _RBSignalDelayErase;
+						return erase_time + _RBSignalDelayErase;
 					default:
 						throw std::invalid_argument("Unsupported command for flash chip.");
 				}
