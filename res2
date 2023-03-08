@@ -1,4 +1,4 @@
-MQSim started at Wed Mar  8 17:22:36 2023
+MQSim started at Wed Mar  8 17:23:26 2023
 
 ******************************
 Executing scenario 1 out of 1 .......
@@ -44,23 +44,23 @@ Trace file: traces/tpcc-small.trace seems healthy
 
 [===================>]  95% progress in Host.IO_Flow.Trace.traces/tpcc-small.trace
 
-0 - 0 - 0's expected time: 1071603351
-0 - 0 - 1's expected time: 1072006442
-0 - 1 - 0's expected time: 1071575021
-0 - 1 - 1's expected time: 1072047019
-0 - 2 - 0's expected time: 1072026122
-0 - 2 - 1's expected time: 1071760351
-0 - 3 - 0's expected time: 1071984392
-0 - 3 - 1's expected time: 1071199357
+0 - 0 - 0's expected time: 1071976455
+0 - 0 - 1's expected time: 1070967321
+0 - 1 - 0's expected time: 1071992176
+0 - 1 - 1's expected time: 1071925866
+0 - 2 - 0's expected time: 1071928478
+0 - 2 - 1's expected time: 1072004004
+0 - 3 - 0's expected time: 1072279963
+0 - 3 - 1's expected time: 1071525026
 
-1 - 0 - 0's expected time: 1071873418
-1 - 0 - 1's expected time: 1072642179
-1 - 1 - 0's expected time: 1071248198
-1 - 1 - 1's expected time: 1072553119
-1 - 2 - 0's expected time: 1072229122
-1 - 2 - 1's expected time: 1070297351
-1 - 3 - 0's expected time: 1072054015
-1 - 3 - 1's expected time: 1071978489
+1 - 0 - 0's expected time: 1071912815
+1 - 0 - 1's expected time: 1071806569
+1 - 1 - 0's expected time: 1071268643
+1 - 1 - 1's expected time: 1072705862
+1 - 2 - 0's expected time: 1071466021
+1 - 2 - 1's expected time: 1070693652
+1 - 3 - 0's expected time: 1072373590
+1 - 3 - 1's expected time: 1071614045
 
 2 - 0 - 0's expected time: 1072454831
 2 - 0 - 1's expected time: 1071688321
@@ -71,21 +71,21 @@ Trace file: traces/tpcc-small.trace seems healthy
 2 - 3 - 0's expected time: 1072668300
 2 - 3 - 1's expected time: 1071896396
 
-3 - 0 - 0's expected time: 1071961908
-3 - 0 - 1's expected time: 1072701485
-3 - 1 - 0's expected time: 1072106455
-3 - 1 - 1's expected time: 1071266776
+3 - 0 - 0's expected time: 1072700965
+3 - 0 - 1's expected time: 1071955244
+3 - 1 - 0's expected time: 1072105935
+3 - 1 - 1's expected time: 1071266256
 3 - 2 - 0's expected time: 1072478337
 3 - 2 - 1's expected time: 1070975327
-3 - 3 - 0's expected time: 1072738252
+3 - 3 - 0's expected time: 1071910861
 3 - 3 - 1's expected time: 1071977171
 
 4 - 0 - 0's expected time: 1072021755
 4 - 0 - 1's expected time: 1071134198
-4 - 1 - 0's expected time: 1072449677
-4 - 1 - 1's expected time: 1071493910
-4 - 2 - 0's expected time: 1071465711
-4 - 2 - 1's expected time: 1072227608
+4 - 1 - 0's expected time: 1072540563
+4 - 1 - 1's expected time: 1071588494
+4 - 2 - 0's expected time: 1071465061
+4 - 2 - 1's expected time: 1072226958
 4 - 3 - 0's expected time: 1072110650
 4 - 3 - 1's expected time: 1071280187
 
@@ -98,32 +98,32 @@ Trace file: traces/tpcc-small.trace seems healthy
 5 - 3 - 0's expected time: 1072581343
 5 - 3 - 1's expected time: 1070991335
 
-6 - 0 - 0's expected time: 1072349598
-6 - 0 - 1's expected time: 1071600805
-6 - 1 - 0's expected time: 1072037847
-6 - 1 - 1's expected time: 1071207384
-6 - 2 - 0's expected time: 1072042025
-6 - 2 - 1's expected time: 1071975715
-6 - 3 - 0's expected time: 1072601435
-6 - 3 - 1's expected time: 1070336624
+6 - 0 - 0's expected time: 1072444879
+6 - 0 - 1's expected time: 1071696086
+6 - 1 - 0's expected time: 1072190104
+6 - 1 - 1's expected time: 1071359641
+6 - 2 - 0's expected time: 1071161787
+6 - 2 - 1's expected time: 1071983034
+6 - 3 - 0's expected time: 1072688198
+6 - 3 - 1's expected time: 1070404788
 
-7 - 0 - 0's expected time: 1071889820
-7 - 0 - 1's expected time: 1072040872
-7 - 1 - 0's expected time: 1072002111
-7 - 1 - 1's expected time: 1071935801
-7 - 2 - 0's expected time: 1071520193
-7 - 2 - 1's expected time: 1072281274
-7 - 3 - 0's expected time: 1072366377
-7 - 3 - 1's expected time: 1071617584
+7 - 0 - 0's expected time: 1071893544
+7 - 0 - 1's expected time: 1071969070
+7 - 1 - 0's expected time: 1071954553
+7 - 1 - 1's expected time: 1071888243
+7 - 2 - 0's expected time: 1071529078
+7 - 2 - 1's expected time: 1072290449
+7 - 3 - 0's expected time: 1072359541
+7 - 3 - 1's expected time: 1071610748
 
 * Replay round 1of 1 started  forHost.IO_Flow.Trace.traces/tpcc-small.trace
 [====================]  100% progress in Host.IO_Flow.Trace.traces/tpcc-small.trace
 
-MQSim finished at Wed Mar  8 17:22:37 2023
+MQSim finished at Wed Mar  8 17:23:26 2023
 
-Total simulation time: 0:0:1
+Total simulation time: 0:0:0
 
 Writing results to output file .......
 Flow Host.IO_Flow.Trace.traces/tpcc-small.trace - total requests generated: 7000 total requests serviced:7000
-                   - device response time: 449 (us) end-to-end request delay:296 (us)
+                   - device response time: 479 (us) end-to-end request delay:326 (us)
 Simulation complete; Press any key to exit.

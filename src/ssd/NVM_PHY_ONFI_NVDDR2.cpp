@@ -144,6 +144,33 @@ namespace SSD_Components {
 	//SLC / TLC 구분하여 속도 조정
 	void NVM_PHY_ONFI_NVDDR2::Send_command_to_chip(std::list<NVM_Transaction_Flash*>& transaction_list)
 	{
+		/**
+		 * 테스트 계획: 특정 lpa일 때 ##모든 칩과 다이의 expectedFinishTime 값을 출력하여
+		 * SLC 속도 조정이 제대로 되어 있는지 확인한다.
+		 * tpcc-small에 7000개의 trace 존재하는데 그 중 6770번째 트레이스 1071226000 13 344996080 16 1 일 때 출력
+		 * 이 트레이스의 LPA는 21562255이고 segment_user_request에 들어온 시간은 Simulator->Time() 기준으로 1071226041
+		 * Host_Interface_NVMe::Input_Stream_Manager_NVMe::segment_user_request에서
+		 * lpa%8 == 0 에 대하여 slc를 설정했을 때와 설정하지 않았을 때의 차이를 확인해본다.
+		*/
+		std::list<NVM_Transaction_Flash*>::iterator iter = transaction_list.begin();
+		ChipBookKeepingEntry* test_chip_bke; 
+		DieBookKeepingEntry* test_die_bke;
+		if((*iter)->LPA == 21562255)
+		{
+			using std::cout;
+			using std::endl;
+			for(int i=0;i<8;i++){
+				for(int j=0;j<4;j++) {
+					test_chip_bke = &bookKeepingTable[i][j];
+					for(int k=0;k<2;k++){
+						test_die_bke = &test_chip_bke->Die_book_keeping_records[k];
+						cout<<i<<" - "<<j<<" - "<<k<<"'s expected time: "<<test_die_bke->Expected_finish_time<<endl;
+					}
+				}
+				cout<<endl;
+			}
+		}
+
 		ONFI_Channel_NVDDR2* target_channel = channels[transaction_list.front()->Address.ChannelID];
 
 		NVM::FlashMemory::Flash_Chip* targetChip = target_channel->Chips[transaction_list.front()->Address.ChipID];
@@ -234,8 +261,10 @@ namespace SSD_Components {
 				}
 				chipBKE->OngoingDieCMDTransfers.push(dieBKE); //전송 중인 커맨드 리스트에 추가
 
+				//수정 - 23.03.08
 				//DieBookKeepingEntry::Expected_finish_time 외에 ChipBookKeepingEntry::Expected_command_exec_finish_time도 조정해야 함
-				dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand->CommandCode, dieBKE->ActiveCommand->Address[0].PageID);
+				//dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand->CommandCode, dieBKE->ActiveCommand->Address[0].PageID);
+				dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand);
 				if (chipBKE->Expected_command_exec_finish_time < dieBKE->Expected_finish_time) {
 					chipBKE->Expected_command_exec_finish_time = dieBKE->Expected_finish_time;
 				}
@@ -271,7 +300,8 @@ namespace SSD_Components {
 					}
 					chipBKE->OngoingDieCMDTransfers.push(dieBKE);
 
-					dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand->CommandCode, dieBKE->ActiveCommand->Address[0].PageID);
+					//수정 - 23.03.08
+					dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand);
 					if (chipBKE->Expected_command_exec_finish_time < dieBKE->Expected_finish_time) {
 						chipBKE->Expected_command_exec_finish_time = dieBKE->Expected_finish_time;
 					}
@@ -302,7 +332,8 @@ namespace SSD_Components {
 					}
 					chipBKE->OngoingDieCMDTransfers.push(dieBKE);
 
-					dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand->CommandCode, dieBKE->ActiveCommand->Address[0].PageID);
+					//수정 - 23.03.08
+					dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand);
 					if (chipBKE->Expected_command_exec_finish_time < dieBKE->Expected_finish_time) {
 						chipBKE->Expected_command_exec_finish_time = dieBKE->Expected_finish_time;
 					}
@@ -334,7 +365,8 @@ namespace SSD_Components {
 				}
 				chipBKE->OngoingDieCMDTransfers.push(dieBKE);
 
-				dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand->CommandCode, dieBKE->ActiveCommand->Address[0].PageID);
+				//수정 - 23.03.08
+				dieBKE->Expected_finish_time = chipBKE->Last_transfer_finish_time + targetChip->Get_command_execution_latency(dieBKE->ActiveCommand);
 				if (chipBKE->Expected_command_exec_finish_time < dieBKE->Expected_finish_time) {
 					chipBKE->Expected_command_exec_finish_time = dieBKE->Expected_finish_time;
 				}
@@ -351,6 +383,7 @@ namespace SSD_Components {
 		channels[((NVM::FlashMemory::Physical_Page_Address*)address)->ChannelID]->Chips[((NVM::FlashMemory::Physical_Page_Address*)address)->ChipID]->Change_memory_status_preconditioning(address, status_info);
 	}
 
+	//if (address.PlaneID == read_transaction->Address.PlaneID) {read_transaction->LPA = command->Meta_data[i].LPA;} 수행
 	void copy_read_data_to_transaction(NVM_Transaction_Flash_RD* read_transaction, NVM::FlashMemory::Flash_Command* command)
 	{
 		int i = 0;
@@ -480,8 +513,9 @@ namespace SSD_Components {
 				this, waitingBKE, (int)NVDDR2_SimEventType::PROGRAM_COPYBACK_CMD_ADDR_TRANSFERRED);
 			waitingChipBKE->OngoingDieCMDTransfers.push(waitingBKE);
 
+			//수정 - 23.03.08
 			waitingBKE->Expected_finish_time = Simulator->Time() + this->channels[channel_id]->ProgramCommandTime[waitingBKE->ActiveTransactions.size()]
-				+ targetChip->Get_command_execution_latency(waitingBKE->ActiveCommand->CommandCode, waitingBKE->ActiveCommand->Address[0].PageID);
+				+ targetChip->Get_command_execution_latency(waitingBKE->ActiveCommand);
 			if (waitingChipBKE->Expected_command_exec_finish_time < waitingBKE->Expected_finish_time) {
 				waitingChipBKE->Expected_command_exec_finish_time = waitingBKE->Expected_finish_time;
 			}
@@ -516,6 +550,7 @@ namespace SSD_Components {
 		broadcastChannelIdleSignal(channel_id);
 	}
 
+	//버스가 IDLE이면 data transfer 수행, IDLE이 아니면 waitingTrxQueue에 추가
 	inline void NVM_PHY_ONFI_NVDDR2::handle_ready_signal_from_chip(NVM::FlashMemory::Flash_Chip* chip, NVM::FlashMemory::Flash_Command* command)
 	{
 		ChipBookKeepingEntry *chipBKE = &_my_instance->bookKeepingTable[chip->ChannelID][chip->ChipID];
@@ -584,8 +619,9 @@ namespace SSD_Components {
 				chipBKE->OngoingDieCMDTransfers.push(dieBKE);
 				_my_instance->channels[chip->ChannelID]->SetStatus(BusChannelStatus::BUSY, chip);
 
+				//수정 - 23.03.08
 				dieBKE->Expected_finish_time = Simulator->Time() + _my_instance->channels[chip->ChannelID]->ProgramCommandTime[dieBKE->ActiveTransactions.size()]
-					+ chip->Get_command_execution_latency(dieBKE->ActiveCommand->CommandCode, dieBKE->ActiveCommand->Address[0].PageID);
+					+ chip->Get_command_execution_latency(dieBKE->ActiveCommand);
 				if (chipBKE->Expected_command_exec_finish_time < dieBKE->Expected_finish_time)
 					chipBKE->Expected_command_exec_finish_time = dieBKE->Expected_finish_time;
 #if 0	
@@ -649,6 +685,7 @@ namespace SSD_Components {
 			_my_instance->broadcastChipIdleSignal(chip);
 	}
 
+	//ChipStatus 조정 및 Event 등록 (READ_DATA_TRANSFERRED로 등록)
 	inline void NVM_PHY_ONFI_NVDDR2::transfer_read_data_from_chip(ChipBookKeepingEntry* chipBKE, DieBookKeepingEntry* dieBKE, NVM_Transaction_Flash* tr)
 	{
 		//DEBUG2("Chip " << tr->Address.ChannelID << ", " << tr->Address.ChipID << ": transfer read data started for LPA: " << tr->LPA)
@@ -662,6 +699,7 @@ namespace SSD_Components {
 		channels[tr->Address.ChannelID]->SetStatus(BusChannelStatus::BUSY, channels[tr->Address.ChannelID]->Chips[tr->Address.ChipID]);
 	}
 
+	//ChipStatus 조정 및 Event 등록 (CMD_ADDR_TRANSFERRED 혹은 CMD_ADDR_DATA_TRANSFERRED로 등록)
 	void NVM_PHY_ONFI_NVDDR2::perform_interleaved_cmd_data_transfer(NVM::FlashMemory::Flash_Chip* chip, DieBookKeepingEntry* bookKeepingEntry)
 	{
 		ONFI_Channel_NVDDR2* target_channel = channels[bookKeepingEntry->ActiveTransactions.front()->Address.ChannelID];

@@ -116,7 +116,9 @@ namespace NVM
 				PRINT_ERROR("Flash chip " << ID() << ": executing a flash operation on a busy die!")
 			}
 
-			targetDie->Expected_finish_time = Simulator->Time() + Get_command_execution_latency(command->CommandCode, command->Address[0].PageID);
+			//수정 - 23.03.08
+			//targetDie->Expected_finish_time = Simulator->Time() + Get_command_execution_latency(command->CommandCode, command->Address[0].PageID);
+			targetDie->Expected_finish_time = Simulator->Time() + Get_command_execution_latency(command);
 			targetDie->CommandFinishEvent = Simulator->Register_sim_event(targetDie->Expected_finish_time,
 				this, command, static_cast<int>(Chip_Sim_Event_Type::COMMAND_FINISHED));
 			targetDie->CurrentCMD = command;
@@ -136,7 +138,9 @@ namespace NVM
 		{
 			Die* targetDie = Dies[command->Address[0].DieID];
 
-			targetDie->STAT_TotalReadTime += Get_command_execution_latency(command->CommandCode, command->Address[0].PageID);
+			//수정 - 23.03.08
+			//targetDie->STAT_TotalReadTime += Get_command_execution_latency(command->CommandCode, command->Address[0].PageID);
+			targetDie->STAT_TotalReadTime += Get_command_execution_latency(command);
 			targetDie->Expected_finish_time = INVALID_TIME;
 			targetDie->CommandFinishEvent = NULL;
 			targetDie->CurrentCMD = NULL;

@@ -204,8 +204,16 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		if(lpa==0)
 			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
 		*/
-		if(lpa==0)
-			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
+		/**
+		 * SLC 속도 조정 관련 테스트 => lpa % 8 == 0 인 모든 lpa에 대하여 SLC로 전환
+		*/
+		/* if(lsa == 344996080){
+			std::cout<<"344996080's LPA: "<<lpa<<std::endl;
+			std::cout<<"simulator time: "<<Simulator->Time()<<std::endl;
+		} */
+
+		//if(lpa%8==0)
+		//	(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
 			
 		bool isSLCTrx = (*p_table)->isLPAEntrySLC(lpa);
 
