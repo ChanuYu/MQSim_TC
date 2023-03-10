@@ -144,32 +144,33 @@ namespace SSD_Components {
 	//SLC / TLC 구분하여 속도 조정
 	void NVM_PHY_ONFI_NVDDR2::Send_command_to_chip(std::list<NVM_Transaction_Flash*>& transaction_list)
 	{
-		/**
-		 * 테스트 계획: 특정 lpa일 때 ##모든 칩과 다이의 expectedFinishTime 값을 출력하여
-		 * SLC 속도 조정이 제대로 되어 있는지 확인한다.
-		 * tpcc-small에 7000개의 trace 존재하는데 그 중 6770번째 트레이스 1071226000 13 344996080 16 1 일 때 출력
-		 * 이 트레이스의 LPA는 21562255이고 segment_user_request에 들어온 시간은 Simulator->Time() 기준으로 1071226041
-		 * Host_Interface_NVMe::Input_Stream_Manager_NVMe::segment_user_request에서
-		 * lpa%8 == 0 에 대하여 slc를 설정했을 때와 설정하지 않았을 때의 차이를 확인해본다.
-		*/
-		std::list<NVM_Transaction_Flash*>::iterator iter = transaction_list.begin();
+		/*
+ 		std::list<NVM_Transaction_Flash*>::iterator iter = transaction_list.begin();
 		ChipBookKeepingEntry* test_chip_bke; 
 		DieBookKeepingEntry* test_die_bke;
 		if((*iter)->LPA == 21562255)
 		{
+			sim_time_type chip_sum, total_sum = 0;
 			using std::cout;
 			using std::endl;
 			for(int i=0;i<8;i++){
+				chip_sum = 0;
 				for(int j=0;j<4;j++) {
 					test_chip_bke = &bookKeepingTable[i][j];
 					for(int k=0;k<2;k++){
 						test_die_bke = &test_chip_bke->Die_book_keeping_records[k];
 						cout<<i<<" - "<<j<<" - "<<k<<"'s expected time: "<<test_die_bke->Expected_finish_time<<endl;
+						chip_sum += test_die_bke->Expected_finish_time;
 					}
+					total_sum += chip_sum;
 				}
+				cout<<"chip sum: "<<chip_sum<<endl;
 				cout<<endl;
 			}
+			cout<<"total sum: "<<total_sum<<endl;
+			cout<<"issued transactions: "<<Stats::issuedTrx<<endl;
 		}
+		*/
 
 		ONFI_Channel_NVDDR2* target_channel = channels[transaction_list.front()->Address.ChannelID];
 

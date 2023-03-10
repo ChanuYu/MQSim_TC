@@ -79,6 +79,7 @@ namespace SSD_Components
         return num_blocks; //바뀐 블록 수 반환
     }
 
+    //블록에 쓸 수 있는 페이지 수 조정 + plane의 페이지 수 조정
     void Flash_Mode_Controller::transformToSLC(Block_Pool_Slot_Type *blk)
     {
         blk->isSLC = true;

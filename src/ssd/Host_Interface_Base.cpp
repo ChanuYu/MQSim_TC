@@ -55,6 +55,7 @@ namespace SSD_Components
 	{
 	}
 
+	//호스트에게 PCIe 메세지를 읽어라는 message를 만들고 Send_to_host()에서 메세지를 참고하여 Event 등록
 	void Host_Interface_Base::Send_read_message_to_host(uint64_t addresss, unsigned int request_read_data_size)
 	{
 		Host_Components::PCIe_Message* pcie_message = new Host_Components::PCIe_Message;

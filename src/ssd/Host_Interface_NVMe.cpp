@@ -4,6 +4,8 @@
 #include "NVM_Transaction_Flash_RD.h"
 #include "NVM_Transaction_Flash_WR.h"
 
+#include "Stats.h"
+
 namespace SSD_Components
 {
 Input_Stream_NVMe::~Input_Stream_NVMe()
@@ -182,6 +184,9 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 	unsigned int transaction_size = 0; //섹터 단위
 	while (handled_sectors_count < req_size)
 	{
+		//수정 - 23.03.08
+		Stats::issuedTrx++;
+
 		//Check if LSA is in the correct range allocated to the stream
 		if (lsa < ((Input_Stream_NVMe *)input_streams[user_request->Stream_id])->Start_logical_sector_address || lsa > ((Input_Stream_NVMe *)input_streams[user_request->Stream_id])->End_logical_sector_address)
 		{
@@ -204,21 +209,14 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		if(lpa==0)
 			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
 		*/
-		/**
-		 * SLC 속도 조정 관련 테스트 => lpa % 8 == 0 인 모든 lpa에 대하여 SLC로 전환
-		*/
-		/* if(lsa == 344996080){
-			std::cout<<"344996080's LPA: "<<lpa<<std::endl;
-			std::cout<<"simulator time: "<<Simulator->Time()<<std::endl;
-		} */
-
-		//if(lpa%8==0)
-		//	(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
+		if(lpa%8==0)
+			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
 			
 		bool isSLCTrx = (*p_table)->isLPAEntrySLC(lpa);
 
 		page_status_type temp = ~(0xffffffffffffffff << (int)transaction_size);
-		access_status_bitmap = temp << (int)(internal_lsa % host_interface->sectors_per_page);
+		//NVM_Transaction_Flash_WR::page_status_type write_sectors_bitmap
+		access_status_bitmap = temp << (int)(internal_lsa % host_interface->sectors_per_page); //페이지내의 섹터 위치로 이동
 
 		//하나의 transaction은 페이지 사이즈를 넘지 않음
 		if (user_request->Type == UserRequestType::READ)
@@ -303,6 +301,7 @@ void Request_Fetch_Unit_NVMe::Process_pcie_write_message(uint64_t address, void 
 }
 
 //Host_Interface_Base::Consume_pcie_message(Host_Components::PCIe_Message* message)에서 process_pcie_read_message 호출
+//write request의 경우 Handle_new_arrived_data()->Fetch_write_data()에 의해 이벤트가 등록됨
 void Request_Fetch_Unit_NVMe::Process_pcie_read_message(uint64_t address, void *payload, unsigned int payload_size)
 {
 	Host_Interface_NVMe *hi = (Host_Interface_NVMe *)host_interface;

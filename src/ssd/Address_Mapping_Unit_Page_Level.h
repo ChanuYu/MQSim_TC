@@ -12,6 +12,8 @@
 #include "NVM_Transaction_Flash_RD.h"
 #include "NVM_Transaction_Flash_WR.h"
 
+#include "Host_Interface_SLC_Table.h"
+
 namespace SSD_Components
 {
 #define MAKE_TABLE_INDEX(LPN,STREAM)
@@ -59,6 +61,9 @@ namespace SSD_Components
 		
 		bool Is_dirty(const stream_id_type streamID, const LPA_type lpa);
 		void Make_clean(const stream_id_type streamID, const LPA_type lpa);
+
+		SLC_Table *slc_table;
+
 	private:
 		std::unordered_map<LPA_type, CMTSlotType*> addressMap;
 		std::list<std::pair<LPA_type, CMTSlotType*>> lruList;
@@ -139,7 +144,7 @@ namespace SSD_Components
 			std::vector<std::vector<flash_channel_ID_type>> stream_channel_ids, std::vector<std::vector<flash_chip_ID_type>> stream_chip_ids,
 			std::vector<std::vector<flash_die_ID_type>> stream_die_ids, std::vector<std::vector<flash_plane_ID_type>> stream_plane_ids,
 			unsigned int Block_no_per_plane, unsigned int Page_no_per_block, unsigned int SectorsPerPage, unsigned int PageSizeInBytes,
-			double Overprovisioning_ratio, CMT_Sharing_Mode sharing_mode = CMT_Sharing_Mode::SHARED, bool fold_large_addresses = true);
+			double Overprovisioning_ratio, SLC_Table *p_slc_table, CMT_Sharing_Mode sharing_mode = CMT_Sharing_Mode::SHARED, bool fold_large_addresses = true);
 		~Address_Mapping_Unit_Page_Level();
 		void Setup_triggers();
 		void Start_simulation();
@@ -167,6 +172,9 @@ namespace SSD_Components
 		void Remove_barrier_for_accessing_lpa(stream_id_type stream_id, LPA_type lpa);
 		void Remove_barrier_for_accessing_mvpn(stream_id_type stream_id, MVPN_type mpvn);
 		void Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address);
+	
+		SLC_Table *slc_table;
+
 	private:
 		static Address_Mapping_Unit_Page_Level* _my_instance;
 		unsigned int cmt_capacity;

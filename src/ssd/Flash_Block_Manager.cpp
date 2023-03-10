@@ -24,13 +24,18 @@ namespace SSD_Components
 	 * 수정계획: transaction별로 행선지(slc/tlc)를 기록하는 변수를 두고 그에 따라 블록 할당 (Data_wf_slc/Data_wf_tlc) 
 	 * read/write(gc가 아닌 경우만 해당) 둘 다 이 함수를 거침
 	*/
-	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_user_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address)
+	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_user_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address, bool isSLC)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];
 		plane_record->Valid_pages_count++;
 		plane_record->Free_pages_count--;		
-		page_address.BlockID = plane_record->Data_wf[stream_id]->BlockID;
-		page_address.PageID = plane_record->Data_wf[stream_id]->Current_page_write_index++;
+		
+		//수정 - 23.03.10
+		Block_Pool_Slot_Type *data_wf = isSLC ? plane_record->Data_wf_slc[stream_id] : plane_record->Data_wf[stream_id];
+		
+		page_address.BlockID = data_wf->BlockID;
+		page_address.PageID = data_wf->Current_page_write_index++;
+		
 		program_transaction_issued(page_address);
 
 		//23.03.03
@@ -38,8 +43,8 @@ namespace SSD_Components
 		//if(plane_record->Data_wf[stream_id]->Current_page_write_index == pages_no_per_block) {
 		if(plane_record->Data_wf[stream_id]->Current_page_write_index == plane_record->Data_wf[stream_id]->Last_page_index) {
 			//Assign a new write frontier block
-			plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false);
-			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address);
+			plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false); //
+			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함
 		}
 
 		plane_record->Check_bookkeeping_correctness(page_address);
@@ -119,6 +124,7 @@ namespace SSD_Components
 		plane_record->Check_bookkeeping_correctness(page_address);
 	}
 
+	//해당 블록 내의 페이지 비트맵 변경 및 PlaneBookKeepingType의 invalid/valid page 수 조정
 	inline void Flash_Block_Manager::Invalidate_page_in_block(const stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& page_address)
 	{
 		PlaneBookKeepingType* plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];
@@ -128,6 +134,7 @@ namespace SSD_Components
 			PRINT_ERROR("Inconsistent status in the Invalidate_page_in_block function! The accessed block is not allocated to stream " << stream_id)
 		}
 		plane_record->Blocks[page_address.BlockID].Invalid_page_count++;
+		//Invalid_page_bitmap: uint64_t라서 페이지 64개만큼 나눠서 관리
 		plane_record->Blocks[page_address.BlockID].Invalid_page_bitmap[page_address.PageID / 64] |= ((uint64_t)0x1) << (page_address.PageID % 64);
 	}
 

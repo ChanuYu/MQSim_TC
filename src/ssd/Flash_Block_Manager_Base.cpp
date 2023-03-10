@@ -49,6 +49,7 @@ namespace SSD_Components
 							plane_manager[channelID][chipID][dieID][planeID].Blocks[blockID].isSLC = false;
 							plane_manager[channelID][chipID][dieID][planeID].Blocks[blockID].Last_page_index = pages_no_per_block;
 
+							//uint64_t => 변수 하나당 64개의 페이지 표현 가능, 블록내에 256개의 페이지가 존재하므로 Page_vector_size는 4
 							Block_Pool_Slot_Type::Page_vector_size = pages_no_per_block / (sizeof(uint64_t) * 8) + (pages_no_per_block % (sizeof(uint64_t) * 8) == 0 ? 0 : 1);
 							plane_manager[channelID][chipID][dieID][planeID].Blocks[blockID].Invalid_page_bitmap = new uint64_t[Block_Pool_Slot_Type::Page_vector_size];
 							for (unsigned int i = 0; i < Block_Pool_Slot_Type::Page_vector_size; i++) {
@@ -151,6 +152,8 @@ namespace SSD_Components
 		return (unsigned int)Free_block_pool.size();
 	}
 
+	//수정할 필요 있음 => 구체적으로 어떤식으로 구현할지 그림으로 표현하고 고칠 것
+	//Free block pool을 slc/tlc로 나눠서 하는 것이 나은가 아니면 하나에서 관리하는 것이 나은가
 	void PlaneBookKeepingType::Add_to_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl)
 	{
 		if(block->isSLC)
@@ -245,6 +248,7 @@ namespace SSD_Components
 		plane_record->Blocks[block_address.BlockID].Has_ongoing_gc_wl = true;
 	}
 	
+	//plane_record->Blocks[page_address.BlockID].Ongoing_user_program_count++ 수행
 	void Flash_Block_Manager_Base::program_transaction_issued(const NVM::FlashMemory::Physical_Page_Address& page_address)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];

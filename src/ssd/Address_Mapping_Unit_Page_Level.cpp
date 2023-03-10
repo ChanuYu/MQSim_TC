@@ -256,6 +256,7 @@ namespace SSD_Components
 		}
 	}
 
+	//return GlobalMappingTable[lpa].WrittenStateBitmap;
 	inline page_status_type AddressMappingDomain::Get_page_status(const bool ideal_mapping, const stream_id_type stream_id, const LPA_type lpa)
 	{
 		if (ideal_mapping) {
@@ -297,10 +298,11 @@ namespace SSD_Components
 		std::vector<std::vector<flash_channel_ID_type>> stream_channel_ids, std::vector<std::vector<flash_chip_ID_type>> stream_chip_ids,
 		std::vector<std::vector<flash_die_ID_type>> stream_die_ids, std::vector<std::vector<flash_plane_ID_type>> stream_plane_ids,
 		unsigned int Block_no_per_plane, unsigned int Page_no_per_block, unsigned int SectorsPerPage, unsigned int PageSizeInByte,
-		double Overprovisioning_ratio, CMT_Sharing_Mode sharing_mode, bool fold_large_addresses)
+		double Overprovisioning_ratio, SLC_Table *p_slc_table, CMT_Sharing_Mode sharing_mode, bool fold_large_addresses)
 		: Address_Mapping_Unit_Base(id, ftl, flash_controller, block_manager, ideal_mapping_table,
 			concurrent_stream_no, channel_count, chip_no_per_channel, die_no_per_chip, plane_no_per_die,
-			Block_no_per_plane, Page_no_per_block, SectorsPerPage, PageSizeInByte, Overprovisioning_ratio, sharing_mode, fold_large_addresses)
+			Block_no_per_plane, Page_no_per_block, SectorsPerPage, PageSizeInByte, Overprovisioning_ratio, sharing_mode, fold_large_addresses),
+			slc_table(p_slc_table)
 	{
 		_my_instance = this;
 		domains = new AddressMappingDomain*[no_of_input_streams];
@@ -588,6 +590,7 @@ namespace SSD_Components
 	*/
 	bool Address_Mapping_Unit_Page_Level::translate_lpa_to_ppa(stream_id_type streamID, NVM_Transaction_Flash* transaction)
 	{
+		//이전에 program된 데이터의 PPA를 CachedMapTable에서 가져옴
 		PPA_type ppa = domains[streamID]->Get_ppa(ideal_mapping_table, streamID, transaction->LPA);
 
 		if (transaction->Type == Transaction_Type::READ) {
@@ -601,7 +604,7 @@ namespace SSD_Components
 			
 			return true;
 		} else {//This is a write transaction
-			allocate_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction);
+			allocate_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction); //plane 위치까지 결정
 			//there are too few free pages remaining only for GC
 			if (ftl->GC_and_WL_Unit->Stop_servicing_writes(transaction->Address)){
 				return false;
@@ -989,6 +992,7 @@ namespace SSD_Components
 		}
 	}
 
+	//Flash_Plane_Allocation_Scheme에 따라 Plane까지의 Physical Address가 정해짐
 	void Address_Mapping_Unit_Page_Level::allocate_plane_for_user_write(NVM_Transaction_Flash_WR* transaction)
 	{
 		LPA_type lpn = transaction->LPA;
@@ -1158,7 +1162,7 @@ namespace SSD_Components
 			if (is_for_gc) {
 				PRINT_ERROR("Unexpected mapping table status in allocate_page_in_plane_for_user_write function for a GC/WL write!")
 			}
-		} else {
+		} else { //처음 쓰여지는 데이터가 아닌 경우
 			if (is_for_gc) {
 				NVM::FlashMemory::Physical_Page_Address addr;
 				Convert_ppa_to_address(old_ppa, addr);
@@ -1175,7 +1179,7 @@ namespace SSD_Components
 					Convert_ppa_to_address(old_ppa, addr);
 					block_manager->Invalidate_page_in_block(transaction->Stream_id, addr);
 				} else {
-					page_status_type read_pages_bitmap = status_intersection ^ prev_page_status;
+					page_status_type read_pages_bitmap = status_intersection ^ prev_page_status; //read update가 필요한 sector의 비트맵
 					NVM_Transaction_Flash_RD *update_read_tr = new NVM_Transaction_Flash_RD(transaction->Source, transaction->Stream_id,
 						count_sector_no_from_status_bitmap(read_pages_bitmap) * SECTOR_SIZE_IN_BYTE, transaction->LPA, old_ppa, transaction->UserIORequest,
 						transaction->Content, transaction, read_pages_bitmap, domain->GlobalMappingTable[transaction->LPA].TimeStamp);
@@ -1228,6 +1232,11 @@ namespace SSD_Components
 	}
 
 	//plane allocation 기법에 따라 Physical_Page_Address& read_address에 위치 정보 기록
+	/** Physical_Address read_address
+	 * block_manager->Allocate_block_and_page_in_plane_for_user_write(stream_id, read_address);
+	 * PPA_type ppa = Convert_address_to_ppa(read_address);
+	 * domain->Update_mapping_info(ideal_mapping_table, stream_id, lpa, ppa, read_sectors_bitmap);
+	*/
 	PPA_type Address_Mapping_Unit_Page_Level::online_create_entry_for_reads(LPA_type lpa, const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& read_address, uint64_t read_sectors_bitmap)
 	{
 		AddressMappingDomain* domain = domains[stream_id];
@@ -1384,7 +1393,8 @@ namespace SSD_Components
 				PRINT_ERROR("Unknown plane allocation scheme type!")
 		}
 
-		block_manager->Allocate_block_and_page_in_plane_for_user_write(stream_id, read_address);
+		//할당된 plane에 대하여 block을 지정하여 bookkeeping (Data_wf에서 프리블록을 받아와서 page까지 위치 할당 완료)
+		block_manager->Allocate_block_and_page_in_plane_for_user_write(stream_id, read_address); 
 		PPA_type ppa = Convert_address_to_ppa(read_address);
 		domain->Update_mapping_info(ideal_mapping_table, stream_id, lpa, ppa, read_sectors_bitmap);
 
