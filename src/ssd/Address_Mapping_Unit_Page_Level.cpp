@@ -1191,13 +1191,14 @@ namespace SSD_Components
 			}
 		}
 
+		bool isSLC = slc_table->isLPAEntrySLC(transaction->LPA);
 		/*The following lines should not be ordered with respect to the block_manager->Invalidate_page_in_block
 		* function call in the above code blocks. Otherwise, GC may be invoked (due to the call to Allocate_block_....) and
 		* may decide to move a page that is just invalidated.*/
 		if (is_for_gc) {
 			block_manager->Allocate_block_and_page_in_plane_for_gc_write(transaction->Stream_id, transaction->Address);
 		} else {
-			block_manager->Allocate_block_and_page_in_plane_for_user_write(transaction->Stream_id, transaction->Address);
+			block_manager->Allocate_block_and_page_in_plane_for_user_write(transaction->Stream_id, transaction->Address, isSLC);
 		}
 		transaction->PPA = Convert_address_to_ppa(transaction->Address);
 		domain->Update_mapping_info(ideal_mapping_table, transaction->Stream_id, transaction->LPA, transaction->PPA,
