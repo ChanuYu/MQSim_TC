@@ -59,28 +59,36 @@ namespace SSD_Components
 		unsigned int Valid_pages_count;
 		unsigned int Invalid_pages_count;
 		Block_Pool_Slot_Type* Blocks;  //모든 기본 플래시 모드(TLC) block
-		std::multimap<unsigned int, Block_Pool_Slot_Type*> Free_block_pool;		//기본 플래시 모드(TLC)인 Free block
+		std::multimap<unsigned int, Block_Pool_Slot_Type*> Free_block_pool;		//unsigned int => erase count
 		Block_Pool_Slot_Type** Data_wf, ** GC_wf; //The write frontier blocks for data and GC pages. MQSim adopts Double Write Frontier approach for user and GC writes which is shown very advantages in: B. Van Houdt, "On the necessity of hot and cold data identification to reduce the write amplification in flash - based SSDs", Perf. Eval., 2014
 		Block_Pool_Slot_Type** Translation_wf; //The write frontier blocks for translation GC pages
+
+		/**
+		 * Free_block_pool <---> free_slc_blocks <---> Data(GC)_wf_slc <---> slc_blocks
+		*/
+		std::deque<Block_Pool_Slot_Type*> slc_blocks; //slc모드로 programmed된 블록을 관리
+		std::multimap<unsigned int, Block_Pool_Slot_Type*> free_slc_blocks; //아직 program되지 않은 slc블록 관리
+		Block_Pool_Slot_Type** Data_wf_slc, **GC_wf_slc;
+
+		//GC victim block 선정방식이 FIFO가 아니라면 신경 쓸 필요 x
 		std::queue<flash_block_ID_type> Block_usage_history;//A fifo queue that keeps track of flash blocks based on their usage history
 		std::set<flash_block_ID_type> Ongoing_erase_operations;
-		Block_Pool_Slot_Type* Get_a_free_block(stream_id_type stream_id, bool for_mapping_data);
+		
+		//free_slc_blocks <---> Data(GC)_wf_slc
+		Block_Pool_Slot_Type* Get_a_free_block(stream_id_type stream_id, bool for_mapping_data, bool for_slc = false);
 		unsigned int Get_free_block_pool_size();
 		void Check_bookkeeping_correctness(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		void Add_to_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl);
-		void Add_to_slc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl);
-		void Add_to_tlc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl);
+		void Add_to_slc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl); //free_slc_blocks에 추가
+		void Add_to_tlc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl); 
+
+		void transformToSLCBlocks(unsigned int num, bool consider_dynamic_wl = false); //Free_block_pool <---> free_slc_blocks
+
 
 		/**
 		 * 23.03.02
 		 * 기존의 Free_block_pool에 모든 free block이 들어있다 가정, Flash Mode Controller에 의해 SLC 영역 조정 (확대/축소)
-		 * 
 		*/
-		Block_Pool_Slot_Type* SLC_blocks;	//SLC 블록 영역
-		std::multimap<unsigned int, Block_Pool_Slot_Type *> Free_block_pool_slc;
-		Block_Pool_Slot_Type** Data_wf_slc, **GC_wf_slc;
-		Block_Pool_Slot_Type** Translation_wf_slc;
-
 		unsigned int getNumOfSLCBlocks();
 		void setNumOfSLCBlocks(unsigned int);
 	private:
@@ -97,7 +105,7 @@ namespace SSD_Components
 			unsigned int channel_count, unsigned int chip_no_per_channel, unsigned int die_no_per_chip, unsigned int plane_no_per_die,
 			unsigned int block_no_per_plane, unsigned int page_no_per_block);
 		virtual ~Flash_Block_Manager_Base();
-		virtual void Allocate_block_and_page_in_plane_for_user_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool isSLC) = 0;
+		virtual void Allocate_block_and_page_in_plane_for_user_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool isSLC = false) = 0;
 		virtual void Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address) = 0;
 		virtual void Allocate_block_and_page_in_plane_for_translation_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool is_for_gc) = 0;
 		virtual void Allocate_Pages_in_block_and_invalidate_remaining_for_preconditioning(const stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& plane_address, std::vector<NVM::FlashMemory::Physical_Page_Address>& page_addresses) = 0;

@@ -122,14 +122,16 @@ namespace SSD_Components
 		Last_page_index = initial_pages_per_blk;
 	}
 
-	Block_Pool_Slot_Type* PlaneBookKeepingType::Get_a_free_block(stream_id_type stream_id, bool for_mapping_data)
+	//interface for free_slc_blocks <---> Data(GC)_wf_slc
+	Block_Pool_Slot_Type* PlaneBookKeepingType::Get_a_free_block(stream_id_type stream_id, bool for_mapping_data, bool for_slc)
 	{
 		Block_Pool_Slot_Type* new_block = NULL;
-		new_block = (*Free_block_pool.begin()).second;//Assign a new write frontier block
-		if (Free_block_pool.size() == 0) {
+		std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = for_slc ? free_slc_blocks : Free_block_pool;
+		new_block = (*free_block_pool.begin()).second;//Assign a new write frontier block
+		if (free_block_pool.size() == 0) {
 			PRINT_ERROR("Requesting a free block from an empty pool!")
 		}
-		Free_block_pool.erase(Free_block_pool.begin());
+		free_block_pool.erase(free_block_pool.begin());
 		new_block->Stream_id = stream_id;
 		new_block->Holds_mapping_data = for_mapping_data;
 		Block_usage_history.push(new_block->BlockID);
@@ -158,27 +160,27 @@ namespace SSD_Components
 	{
 		if(block->isSLC)
 			Add_to_slc_free_block_pool(block,consider_dynamic_wl);
-		else
+		else	
 			Add_to_tlc_free_block_pool(block,consider_dynamic_wl);
-	/*  23.03.02
+		/* 
 		if (consider_dynamic_wl) {
 			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(block->Erase_count, block);
 			Free_block_pool.insert(entry);
 		} else {
 			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(0, block);
 			Free_block_pool.insert(entry);
-		}
-	*/
+		} 
+		*/
 	}
 
 	void PlaneBookKeepingType::Add_to_slc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl)
 	{
 		if (consider_dynamic_wl) {
 			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(block->Erase_count, block);
-			Free_block_pool_slc.insert(entry);
+			free_slc_blocks.insert(entry);
 		} else {
 			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(0, block);
-			Free_block_pool_slc.insert(entry);
+			free_slc_blocks.insert(entry);
 		}
 	}
 
@@ -190,6 +192,21 @@ namespace SSD_Components
 		} else {
 			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(0, block);
 			Free_block_pool.insert(entry);
+		}
+	}
+
+	void PlaneBookKeepingType::transformToSLCBlocks(unsigned int num, bool consider_dynamic_wl)
+	{
+		if(Free_block_pool.size() < num)
+			PRINT_ERROR("transformToSLCBlocks: Requesting free blocks over the current number of free blocks")
+
+		Block_Pool_Slot_Type *block = NULL;
+		unsigned int erase_count;
+		for(unsigned int i=0;i<num;i++){
+			block = (*Free_block_pool.begin()).second;
+			erase_count = consider_dynamic_wl ? block->Erase_count : 0;
+			free_slc_blocks.insert(std::pair<unsigned int, Block_Pool_Slot_Type*>(erase_count, block));
+			Free_block_pool.erase(Free_block_pool.begin());
 		}
 	}
 
@@ -211,6 +228,7 @@ namespace SSD_Components
 		return max_erased_block - min_erased_block;
 	}
 
+	//수정 계획 - SLC 블록을 따로 반환하도록 수정
 	flash_block_ID_type Flash_Block_Manager_Base::Get_coldest_block_id(const NVM::FlashMemory::Physical_Page_Address& plane_address)
 	{
 		unsigned int min_erased_block = 0;

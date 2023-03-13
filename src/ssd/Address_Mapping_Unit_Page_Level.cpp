@@ -1210,6 +1210,7 @@ namespace SSD_Components
 		allocate_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction);
 	}
 
+	//pagemap table을 플래시 메모리에 저장하기 위한 함수로 시뮬레이션 시작할 때에만 호출 됨
 	void Address_Mapping_Unit_Page_Level::allocate_page_in_plane_for_translation_write(NVM_Transaction_Flash* transaction, MVPN_type mvpn, bool is_for_gc)
 	{
 		AddressMappingDomain* domain = domains[transaction->Stream_id];
