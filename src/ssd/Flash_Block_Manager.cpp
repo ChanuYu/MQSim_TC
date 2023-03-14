@@ -31,11 +31,12 @@ namespace SSD_Components
 		plane_record->Free_pages_count--;		
 		
 		//수정 - 23.03.10
-		Block_Pool_Slot_Type *data_wf = isSLC ? plane_record->Data_wf_slc[stream_id] : plane_record->Data_wf[stream_id];
+		//Block_Pool_Slot_Type *data_wf = isSLC ? plane_record->Data_wf_slc[stream_id] : plane_record->Data_wf[stream_id];
+		Block_Pool_Slot_Type *data_wf = plane_record->Data_wf[stream_id];
 		using std::cout;
 		using std::endl;
-		if(isSLC)
-			cout<<"data_wf is not initialized causing Seffault"<<endl;
+		//if(isSLC)
+		//	cout<<"data_wf is not initialized causing Seffault"<<endl;
 
 		page_address.BlockID = data_wf->BlockID;
 		page_address.PageID = data_wf->Current_page_write_index++;

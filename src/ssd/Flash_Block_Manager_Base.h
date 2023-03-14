@@ -49,15 +49,16 @@ namespace SSD_Components
 		//23.03.02
 		bool isSLC = false;
 		flash_page_ID_type Last_page_index; //SLC로 조정한 경우 기존의 Current_page_write_index와 pages_no_per_block의 비교를 이 변수와의 비교로 바꿔야 함 
+		void changeToSLC(); //Free_block_pool <---> free_slc_block 전용 인터페이스 (Free block에서만 호출되어야 함)
 	};
 
 	class PlaneBookKeepingType
 	{
 	public:
 		unsigned int Total_pages_count;
-		unsigned int Free_pages_count;
+		unsigned int Free_pages_count;	//slc로 전환할 경우 감소
 		unsigned int Valid_pages_count;
-		unsigned int Invalid_pages_count;
+		unsigned int Invalid_pages_count; //slc로 전환할 경우 증가
 		Block_Pool_Slot_Type* Blocks;  //모든 기본 플래시 모드(TLC) block
 		std::multimap<unsigned int, Block_Pool_Slot_Type*> Free_block_pool;		//unsigned int => erase count
 		Block_Pool_Slot_Type** Data_wf, ** GC_wf; //The write frontier blocks for data and GC pages. MQSim adopts Double Write Frontier approach for user and GC writes which is shown very advantages in: B. Van Houdt, "On the necessity of hot and cold data identification to reduce the write amplification in flash - based SSDs", Perf. Eval., 2014
@@ -66,7 +67,8 @@ namespace SSD_Components
 		/**
 		 * Free_block_pool <---> free_slc_blocks <---> Data(GC)_wf_slc <---> slc_blocks
 		*/
-		std::deque<Block_Pool_Slot_Type*> slc_blocks; //slc모드로 programmed된 블록을 관리
+		//std::deque<Block_Pool_Slot_Type*> slc_blocks; 
+		std::map<PPA_type,Block_Pool_Slot_Type*> slc_blocks; //slc모드로 programmed된 블록을 관리
 		std::multimap<unsigned int, Block_Pool_Slot_Type*> free_slc_blocks; //아직 program되지 않은 slc블록 관리
 		Block_Pool_Slot_Type** Data_wf_slc, **GC_wf_slc;
 
@@ -82,8 +84,7 @@ namespace SSD_Components
 		void Add_to_slc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl); //free_slc_blocks에 추가
 		void Add_to_tlc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl); 
 		
-		//Free_block_pool <---> free_slc_blocks
-		void transformToSLCBlocks(unsigned int num, bool consider_dynamic_wl = false); 
+		//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
 
 
 		/**
@@ -128,6 +129,9 @@ namespace SSD_Components
 		void Program_transaction_serviced(const NVM::FlashMemory::Physical_Page_Address& page_address);//Updates the block bookkeeping record
 		bool Is_having_ongoing_program(const NVM::FlashMemory::Physical_Page_Address& block_address);//Cheks if block has any ongoing program request
 		bool Is_page_valid(Block_Pool_Slot_Type* block, flash_page_ID_type page_id);//Make the page invalid in the block bookkeeping record
+		
+		//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
+		void transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false); 
 	protected:
 		PlaneBookKeepingType ****plane_manager;//Keeps track of plane block usage information
 		GC_and_WL_Unit_Base *gc_and_wl_unit;

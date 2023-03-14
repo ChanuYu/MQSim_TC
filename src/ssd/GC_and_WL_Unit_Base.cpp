@@ -160,8 +160,13 @@ namespace SSD_Components
 				_my_instance->address_mapping_unit->Start_servicing_writes_for_overfull_plane(transaction->Address);//Must be inovked after above statements since it may lead to flash page consumption for waiting program transactions
 
 				if (_my_instance->Stop_servicing_writes(transaction->Address)) {
-					//Erase Trx일 때 is_slc()반환에 대한 검토 필요
-					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(transaction->is_slc()), transaction->Address);
+					PPA_type ppa = _my_instance->address_mapping_unit->Convert_address_to_ppa(transaction->Address);
+					bool isSLC = false;
+
+					if(pbke->slc_blocks.find(ppa)!=pbke->slc_blocks.end())
+						isSLC = true;
+
+					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(isSLC), transaction->Address);
 				}
 				break;
 			} //switch (transaction->Type)

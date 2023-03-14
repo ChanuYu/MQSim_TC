@@ -138,6 +138,20 @@ namespace SSD_Components
 
 		return new_block;
 	}
+
+	//Free_block_pool <---> free_slc_block 전용 인터페이스 (Free block에서만 호출되어야 함)
+	//isSLC, Last_page_index, Invalid_page_count, bitmap 조정
+	void Block_Pool_Slot_Type::changeToSLC()
+	{
+		isSLC = true;
+		Last_page_index = initial_pages_per_blk / 3 - 1;
+		Invalid_page_count += (initial_pages_per_blk / 3) * 2 + 1;
+
+		//invalidate page bitmap
+		for(unsigned int i=Last_page_index+1;i<initial_pages_per_blk;i++)
+			Invalid_page_bitmap[i / 64] |= ((uint64_t)0x1) << (i % 64);
+
+	}
 	
 	void PlaneBookKeepingType::Check_bookkeeping_correctness(const NVM::FlashMemory::Physical_Page_Address& plane_address)
 	{
@@ -159,15 +173,10 @@ namespace SSD_Components
 		return (unsigned int)free_block_pool.size();
 	}
 
-	//수정할 필요 있음 => 구체적으로 어떤식으로 구현할지 그림으로 표현하고 고칠 것
-	//Free block pool을 slc/tlc로 나눠서 하는 것이 나은가 아니면 하나에서 관리하는 것이 나은가
+	//Erased block을 Free block pool에 추가하는 경우, 초기화에서 free block 추가하는 경우에 호출
+	//Free_block_pool <---> free_slc_block 인터페이스 이전단계에 사용
 	void PlaneBookKeepingType::Add_to_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl)
 	{
-		if(block->isSLC)
-			Add_to_slc_free_block_pool(block,consider_dynamic_wl);
-		else	
-			Add_to_tlc_free_block_pool(block,consider_dynamic_wl);
-		/* 
 		if (consider_dynamic_wl) {
 			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(block->Erase_count, block);
 			Free_block_pool.insert(entry);
@@ -175,44 +184,37 @@ namespace SSD_Components
 			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(0, block);
 			Free_block_pool.insert(entry);
 		} 
-		*/
 	}
 
-	void PlaneBookKeepingType::Add_to_slc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl)
+	void PlaneBookKeepingType::setNumOfSLCBlocks(unsigned int num)
 	{
-		if (consider_dynamic_wl) {
-			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(block->Erase_count, block);
-			free_slc_blocks.insert(entry);
-		} else {
-			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(0, block);
-			free_slc_blocks.insert(entry);
-		}
+		curNumOfSLCBlocks = num;
 	}
 
-	void PlaneBookKeepingType::Add_to_tlc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl)
+	unsigned int PlaneBookKeepingType::getNumOfSLCBlocks()
 	{
-		if (consider_dynamic_wl) {
-			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(block->Erase_count, block);
-			Free_block_pool.insert(entry);
-		} else {
-			std::pair<unsigned int, Block_Pool_Slot_Type*> entry(0, block);
-			Free_block_pool.insert(entry);
-		}
+		return curNumOfSLCBlocks;
 	}
 
-	void PlaneBookKeepingType::transformToSLCBlocks(unsigned int num, bool consider_dynamic_wl)
+	void Flash_Block_Manager_Base::transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl)
 	{
-		if(Free_block_pool.size() < num)
+		if(pbke->Free_block_pool.size() < num)
 			PRINT_ERROR("transformToSLCBlocks: Requesting free blocks over the current number of free blocks")
 
 		Block_Pool_Slot_Type *block = NULL;
 		unsigned int erase_count;
 		for(unsigned int i=0;i<num;i++){
-			block = (*Free_block_pool.begin()).second;
+			block = (*pbke->Free_block_pool.begin()).second;
+			block->changeToSLC(); //Last_page_index, page bit map 변경
+
 			erase_count = consider_dynamic_wl ? block->Erase_count : 0;
-			free_slc_blocks.insert(std::pair<unsigned int, Block_Pool_Slot_Type*>(erase_count, block));
-			Free_block_pool.erase(Free_block_pool.begin());
+			pbke->free_slc_blocks.insert(std::pair<unsigned int, Block_Pool_Slot_Type*>(erase_count, block));
+			pbke->Free_block_pool.erase(pbke->Free_block_pool.begin());
 		}
+
+		pbke->Free_pages_count -= num * pages_no_per_block;
+		pbke->Invalid_pages_count += num * pages_no_per_block;
+		pbke->setNumOfSLCBlocks(num);
 	}
 
 	unsigned int Flash_Block_Manager_Base::Get_min_max_erase_difference(const NVM::FlashMemory::Physical_Page_Address& plane_address)
@@ -314,18 +316,5 @@ namespace SSD_Components
 			return true;
 		}
 		return false;
-	}
-
-	/**
-	 * 추가한 함수
-	*/
-	void PlaneBookKeepingType::setNumOfSLCBlocks(unsigned int num)
-	{
-		curNumOfSLCBlocks = num;
-	}
-
-	unsigned int PlaneBookKeepingType::getNumOfSLCBlocks()
-	{
-		return curNumOfSLCBlocks;
 	}
 }
