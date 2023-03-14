@@ -76,13 +76,14 @@ namespace SSD_Components
 		
 		//free_slc_blocks <---> Data(GC)_wf_slc
 		Block_Pool_Slot_Type* Get_a_free_block(stream_id_type stream_id, bool for_mapping_data, bool for_slc = false);
-		unsigned int Get_free_block_pool_size();
+		unsigned int Get_free_block_pool_size(bool slc_area = false);
 		void Check_bookkeeping_correctness(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		void Add_to_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl);
 		void Add_to_slc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl); //free_slc_blocks에 추가
 		void Add_to_tlc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl); 
-
-		void transformToSLCBlocks(unsigned int num, bool consider_dynamic_wl = false); //Free_block_pool <---> free_slc_blocks
+		
+		//Free_block_pool <---> free_slc_blocks
+		void transformToSLCBlocks(unsigned int num, bool consider_dynamic_wl = false); 
 
 
 		/**

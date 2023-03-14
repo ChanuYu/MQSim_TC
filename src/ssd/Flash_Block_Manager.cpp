@@ -56,7 +56,7 @@ namespace SSD_Components
 			//Assign a new write frontier block
 			//plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false); //
 			data_wf = plane_record->Get_a_free_block(stream_id,false);
-			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함
+			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함
 		}
 
 		plane_record->Check_bookkeeping_correctness(page_address);
@@ -70,12 +70,14 @@ namespace SSD_Components
 		page_address.BlockID = plane_record->GC_wf[stream_id]->BlockID;
 		page_address.PageID = plane_record->GC_wf[stream_id]->Current_page_write_index++;
 
+		//수정 - 23.03.14
+		bool isSLC = plane_record->GC_wf[stream_id]->isSLC;
 		
 		//The current write frontier block is written to the end
 		if (plane_record->GC_wf[stream_id]->Current_page_write_index == plane_record->Data_wf[stream_id]->Last_page_index) {
 			//Assign a new write frontier block
 			plane_record->GC_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false);
-			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address);
+			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address);
 		}
 		plane_record->Check_bookkeeping_correctness(page_address);
 	}
@@ -130,7 +132,7 @@ namespace SSD_Components
 			//Assign a new write frontier block
 			plane_record->Translation_wf[streamID] = plane_record->Get_a_free_block(streamID, true);
 			if (!is_for_gc) {
-				gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address);
+				gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(false), page_address);
 			}
 		}
 		plane_record->Check_bookkeeping_correctness(page_address);

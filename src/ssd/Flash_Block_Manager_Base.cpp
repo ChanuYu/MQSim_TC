@@ -149,9 +149,14 @@ namespace SSD_Components
 		}
 	}
 
-	unsigned int PlaneBookKeepingType::Get_free_block_pool_size()
+	/**
+	 * GC_WL_Unit_Page_Level::Check_gc_required()와 함께 쓰임
+	 * Check_gc_required()가 호출될 때 bool slc_area를 추가하고 slc 영역 여부에 따라 반환하는 사이즈를 달리할 것
+	*/
+	unsigned int PlaneBookKeepingType::Get_free_block_pool_size(bool slc_area)
 	{
-		return (unsigned int)Free_block_pool.size();
+		const std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = slc_area ? free_slc_blocks : Free_block_pool;
+		return (unsigned int)free_block_pool.size();
 	}
 
 	//수정할 필요 있음 => 구체적으로 어떤식으로 구현할지 그림으로 표현하고 고칠 것

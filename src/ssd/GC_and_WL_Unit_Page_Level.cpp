@@ -13,10 +13,10 @@ namespace SSD_Components
 		GC_Block_Selection_Policy_Type block_selection_policy, double gc_threshold, bool preemptible_gc_enabled, double gc_hard_threshold,
 		unsigned int ChannelCount, unsigned int chip_no_per_channel, unsigned int die_no_per_chip, unsigned int plane_no_per_die,
 		unsigned int block_no_per_plane, unsigned int Page_no_per_block, unsigned int sectors_per_page, 
-		bool use_copyback, double rho, unsigned int max_ongoing_gc_reqs_per_plane, bool dynamic_wearleveling_enabled, bool static_wearleveling_enabled, unsigned int static_wearleveling_threshold, int seed)
+		bool use_copyback, double rho, SLC_Table* slc_table, unsigned int max_ongoing_gc_reqs_per_plane, bool dynamic_wearleveling_enabled, bool static_wearleveling_enabled, unsigned int static_wearleveling_threshold, int seed)
 		: GC_and_WL_Unit_Base(id, address_mapping_unit, block_manager, tsu, flash_controller, block_selection_policy, gc_threshold, preemptible_gc_enabled, gc_hard_threshold,
 		ChannelCount, chip_no_per_channel, die_no_per_chip, plane_no_per_die, block_no_per_plane, Page_no_per_block, sectors_per_page, use_copyback, rho, max_ongoing_gc_reqs_per_plane, 
-			dynamic_wearleveling_enabled, static_wearleveling_enabled, static_wearleveling_threshold, seed)
+			dynamic_wearleveling_enabled, static_wearleveling_enabled, static_wearleveling_threshold, seed, slc_table)
 	{
 		rga_set_size = (unsigned int)log2(block_no_per_plane);
 	}
