@@ -7,10 +7,10 @@ namespace SSD_Components
 	unsigned int Block_Pool_Slot_Type::Page_vector_size = 0;
 	Flash_Block_Manager_Base::Flash_Block_Manager_Base(GC_and_WL_Unit_Base* gc_and_wl_unit, unsigned int max_allowed_block_erase_count, unsigned int total_concurrent_streams_no,
 		unsigned int channel_count, unsigned int chip_no_per_channel, unsigned int die_no_per_chip, unsigned int plane_no_per_die,
-		unsigned int block_no_per_plane, unsigned int page_no_per_block)
+		unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int initial_slc_blk)
 		: gc_and_wl_unit(gc_and_wl_unit), max_allowed_block_erase_count(max_allowed_block_erase_count), total_concurrent_streams_no(total_concurrent_streams_no),
 		channel_count(channel_count), chip_no_per_channel(chip_no_per_channel), die_no_per_chip(die_no_per_chip), plane_no_per_die(plane_no_per_die),
-		block_no_per_plane(block_no_per_plane), pages_no_per_block(page_no_per_block)
+		block_no_per_plane(block_no_per_plane), pages_no_per_block(page_no_per_block), initial_slc_blk_per_plane(initial_slc_blk)
 	{
 		//23.03.03
 		initial_pages_per_blk = pages_no_per_block;
@@ -47,7 +47,7 @@ namespace SSD_Components
 							
 							//수정 - 23.03.03
 							plane_manager[channelID][chipID][dieID][planeID].Blocks[blockID].isSLC = false;
-							plane_manager[channelID][chipID][dieID][planeID].Blocks[blockID].Last_page_index = pages_no_per_block;
+							plane_manager[channelID][chipID][dieID][planeID].Blocks[blockID].Last_page_index = pages_no_per_block - 1;
 
 							//uint64_t => 변수 하나당 64개의 페이지 표현 가능, 블록내에 256개의 페이지가 존재하므로 Page_vector_size는 4
 							Block_Pool_Slot_Type::Page_vector_size = pages_no_per_block / (sizeof(uint64_t) * 8) + (pages_no_per_block % (sizeof(uint64_t) * 8) == 0 ? 0 : 1);
@@ -57,13 +57,25 @@ namespace SSD_Components
 							}
 							plane_manager[channelID][chipID][dieID][planeID].Add_to_free_block_pool(&plane_manager[channelID][chipID][dieID][planeID].Blocks[blockID], false);
 						}
+
+						//plane별로 초기 free SLC 블록 할당
+						transformToSLCBlocks(&plane_manager[channelID][chipID][dieID][planeID], initial_slc_blk_per_plane, true);
+
 						plane_manager[channelID][chipID][dieID][planeID].Data_wf = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
 						plane_manager[channelID][chipID][dieID][planeID].Translation_wf = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
 						plane_manager[channelID][chipID][dieID][planeID].GC_wf = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
+
+						//수정 - 23.03.15
+						plane_manager[channelID][chipID][dieID][planeID].Data_wf_slc = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
+						plane_manager[channelID][chipID][dieID][planeID].GC_wf_slc = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
+
 						for (unsigned int stream_cntr = 0; stream_cntr < total_concurrent_streams_no; stream_cntr++) {
 							plane_manager[channelID][chipID][dieID][planeID].Data_wf[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false);
 							plane_manager[channelID][chipID][dieID][planeID].Translation_wf[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, true);
 							plane_manager[channelID][chipID][dieID][planeID].GC_wf[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false);
+
+							plane_manager[channelID][chipID][dieID][planeID].Data_wf_slc[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false, true);
+							plane_manager[channelID][chipID][dieID][planeID].GC_wf_slc[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false, true);
 						}
 					}
 				}
@@ -119,7 +131,7 @@ namespace SSD_Components
 
 		//23.03.03
 		isSLC = false;
-		Last_page_index = initial_pages_per_blk;
+		Last_page_index = initial_pages_per_blk - 1;
 	}
 
 	//interface for free_slc_blocks <---> Data(GC)_wf_slc
@@ -140,19 +152,33 @@ namespace SSD_Components
 	}
 
 	//Free_block_pool <---> free_slc_block 전용 인터페이스 (Free block에서만 호출되어야 함)
+	//slc ---> tlc인 경우에도 free_slc_blocks에 있는 블록들을 대상으로 Free_block_pool로 이동
+	//free_slc_block에 잔여블록이 부족한 경우 transformToTLC()에서 migration함수를 호출한 후에 다시 시도해야 함
 	//isSLC, Last_page_index, Invalid_page_count, bitmap 조정
-	void Block_Pool_Slot_Type::changeToSLC()
+	void Block_Pool_Slot_Type::changeFlashMode(bool toSLC)
 	{
-		isSLC = true;
-		Last_page_index = initial_pages_per_blk / 3 - 1;
-		Invalid_page_count += (initial_pages_per_blk / 3) * 2 + 1;
+		isSLC = toSLC;
+		Last_page_index = toSLC ? initial_pages_per_blk / 3 - 1 : initial_pages_per_blk - 1;
+		unsigned int _invalid_page_count = (initial_pages_per_blk / 3) * 2 + 1;
 
-		//invalidate page bitmap
-		for(unsigned int i=Last_page_index+1;i<initial_pages_per_blk;i++)
-			Invalid_page_bitmap[i / 64] |= ((uint64_t)0x1) << (i % 64);
+		if(toSLC)
+		{
+			Invalid_page_count += _invalid_page_count;
 
+			//invalidate page bitmap
+			for(unsigned int i=Last_page_index+1;i<initial_pages_per_blk;i++)
+				Invalid_page_bitmap[i / 64] |= ((uint64_t)0x1) << (i % 64);
+		}
+		else
+		{
+			Invalid_page_count -= _invalid_page_count;
+
+			for(unsigned int i=0;i<Block_Pool_Slot_Type::Page_vector_size;i++)
+				Invalid_page_bitmap[i] = All_VALID_PAGE;
+		}
+			
 	}
-	
+
 	void PlaneBookKeepingType::Check_bookkeeping_correctness(const NVM::FlashMemory::Physical_Page_Address& plane_address)
 	{
 		if (Total_pages_count != Free_pages_count + Valid_pages_count + Invalid_pages_count) {
@@ -174,7 +200,7 @@ namespace SSD_Components
 	}
 
 	//Erased block을 Free block pool에 추가하는 경우, 초기화에서 free block 추가하는 경우에 호출
-	//Free_block_pool <---> free_slc_block 인터페이스 이전단계에 사용
+	//Free_block_pool <---> free_slc_block 인터페이스 이전단계
 	void PlaneBookKeepingType::Add_to_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl)
 	{
 		if (consider_dynamic_wl) {
@@ -196,6 +222,9 @@ namespace SSD_Components
 		return curNumOfSLCBlocks;
 	}
 
+	//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
+	//plane별로 slc로 전환해야 할 블록의 수를 넘겨주면 각종 변수 조정 및 free_slc_block 풀로 이동
+	//호출시기: 미정
 	void Flash_Block_Manager_Base::transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl)
 	{
 		if(pbke->Free_block_pool.size() < num)
@@ -205,7 +234,7 @@ namespace SSD_Components
 		unsigned int erase_count;
 		for(unsigned int i=0;i<num;i++){
 			block = (*pbke->Free_block_pool.begin()).second;
-			block->changeToSLC(); //Last_page_index, page bit map 변경
+			block->changeFlashMode(true); //Last_page_index, page bit map 변경
 
 			erase_count = consider_dynamic_wl ? block->Erase_count : 0;
 			pbke->free_slc_blocks.insert(std::pair<unsigned int, Block_Pool_Slot_Type*>(erase_count, block));
@@ -215,6 +244,29 @@ namespace SSD_Components
 		pbke->Free_pages_count -= num * pages_no_per_block;
 		pbke->Invalid_pages_count += num * pages_no_per_block;
 		pbke->setNumOfSLCBlocks(num);
+	}
+
+	//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
+	//SLC block의 내용을 erase 하는 것은 별도의 함수
+	void Flash_Block_Manager_Base::transformToTLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl)
+	{
+		if(pbke->free_slc_blocks.size() < num)
+		{
+			//pbke->slc_blocks에서 잘 안 쓰이는 데이터 마이그레이션 후 free_slc_blocks로 추가하는 함수 호출
+			//event 재등록
+			return; //아직 migration이 완료되지 않았으므로 event를 재등록하고 return
+		}
+		
+		Block_Pool_Slot_Type *block = NULL;
+		unsigned int erase_count;
+		for(unsigned int i=0;i<num;i++){
+			block = (*pbke->free_slc_blocks.begin()).second;
+			block->changeFlashMode(false);
+
+			erase_count = consider_dynamic_wl ? block->Erase_count : 0;
+			pbke->Free_block_pool.insert(std::pair<unsigned int, Block_Pool_Slot_Type*>(erase_count,block));
+			pbke->free_slc_blocks.erase(pbke->free_slc_blocks.begin());
+		}
 	}
 
 	unsigned int Flash_Block_Manager_Base::Get_min_max_erase_difference(const NVM::FlashMemory::Physical_Page_Address& plane_address)

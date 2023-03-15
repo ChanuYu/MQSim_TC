@@ -48,8 +48,10 @@ namespace SSD_Components
 		
 		//23.03.02
 		bool isSLC = false;
-		flash_page_ID_type Last_page_index; //SLC로 조정한 경우 기존의 Current_page_write_index와 pages_no_per_block의 비교를 이 변수와의 비교로 바꿔야 함 
-		void changeToSLC(); //Free_block_pool <---> free_slc_block 전용 인터페이스 (Free block에서만 호출되어야 함)
+		flash_page_ID_type Last_page_index; //default: pages_no_per_block - 1 (index임)  
+		
+		
+		void changeFlashMode(bool toSLC); //Free_block_pool <---> free_slc_block 전용 인터페이스 (Free block에서만 호출되어야 함)
 	};
 
 	class PlaneBookKeepingType
@@ -81,8 +83,6 @@ namespace SSD_Components
 		unsigned int Get_free_block_pool_size(bool slc_area = false);
 		void Check_bookkeeping_correctness(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		void Add_to_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl);
-		void Add_to_slc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl); //free_slc_blocks에 추가
-		void Add_to_tlc_free_block_pool(Block_Pool_Slot_Type* block, bool consider_dynamic_wl); 
 		
 		//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
 
@@ -105,7 +105,7 @@ namespace SSD_Components
 	public:
 		Flash_Block_Manager_Base(GC_and_WL_Unit_Base* gc_and_wl_unit, unsigned int max_allowed_block_erase_count, unsigned int total_concurrent_streams_no,
 			unsigned int channel_count, unsigned int chip_no_per_channel, unsigned int die_no_per_chip, unsigned int plane_no_per_die,
-			unsigned int block_no_per_plane, unsigned int page_no_per_block);
+			unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int initial_slc_blk);
 		virtual ~Flash_Block_Manager_Base();
 		virtual void Allocate_block_and_page_in_plane_for_user_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool isSLC = false) = 0;
 		virtual void Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address) = 0;
@@ -131,7 +131,8 @@ namespace SSD_Components
 		bool Is_page_valid(Block_Pool_Slot_Type* block, flash_page_ID_type page_id);//Make the page invalid in the block bookkeeping record
 		
 		//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
-		void transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false); 
+		void transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false);
+		void transformToTLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false); 
 	protected:
 		PlaneBookKeepingType ****plane_manager;//Keeps track of plane block usage information
 		GC_and_WL_Unit_Base *gc_and_wl_unit;
@@ -145,6 +146,8 @@ namespace SSD_Components
 		unsigned int block_no_per_plane;
 		unsigned int pages_no_per_block;
 		void program_transaction_issued(const NVM::FlashMemory::Physical_Page_Address& page_address);//Updates the block bookkeeping record
+	
+		unsigned int initial_slc_blk_per_plane;
 	};
 }
 

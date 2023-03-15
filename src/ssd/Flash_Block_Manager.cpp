@@ -9,9 +9,9 @@ namespace SSD_Components
 {
 	Flash_Block_Manager::Flash_Block_Manager(GC_and_WL_Unit_Base* gc_and_wl_unit, unsigned int max_allowed_block_erase_count, unsigned int total_concurrent_streams_no,
 		unsigned int channel_count, unsigned int chip_no_per_channel, unsigned int die_no_per_chip, unsigned int plane_no_per_die,
-		unsigned int block_no_per_plane, unsigned int page_no_per_block)
+		unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int initial_slc_blk)
 		: Flash_Block_Manager_Base(gc_and_wl_unit, max_allowed_block_erase_count, total_concurrent_streams_no, channel_count, chip_no_per_channel, die_no_per_chip,
-			plane_no_per_die, block_no_per_plane, page_no_per_block)
+			plane_no_per_die, block_no_per_plane, page_no_per_block, initial_slc_blk)
 	{
 	}
 
@@ -31,53 +31,45 @@ namespace SSD_Components
 		plane_record->Free_pages_count--;		
 		
 		//수정 - 23.03.10
-		//Block_Pool_Slot_Type *data_wf = isSLC ? plane_record->Data_wf_slc[stream_id] : plane_record->Data_wf[stream_id];
-		Block_Pool_Slot_Type *data_wf = plane_record->Data_wf[stream_id];
-		using std::cout;
-		using std::endl;
-		//if(isSLC)
-		//	cout<<"data_wf is not initialized causing Seffault"<<endl;
+		Block_Pool_Slot_Type *data_wf = isSLC ? plane_record->Data_wf_slc[stream_id] : plane_record->Data_wf[stream_id];
 
 		page_address.BlockID = data_wf->BlockID;
 		page_address.PageID = data_wf->Current_page_write_index++;
 		
 		program_transaction_issued(page_address);
 
-		//23.03.03
+		//수정 - 23.03.15
 		//The current write frontier block is written to the end
 		//prev: pages_no_per_block
-		/* if(plane_record->Data_wf[stream_id]->Current_page_write_index == plane_record->Data_wf[stream_id]->Last_page_index) {
-			//Assign a new write frontier block
-			plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false); //
-			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함
-		} */
-
-		//23.03.13 SLC/TLC 영역 구현방법 정한 후 수정 필요
-		if(plane_record->Data_wf[stream_id]->Current_page_write_index == data_wf->Last_page_index) {
+		if(data_wf->Current_page_write_index == data_wf->Last_page_index + 1) {
 			//Assign a new write frontier block
 			//plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false); //
-			data_wf = plane_record->Get_a_free_block(stream_id,false);
+			data_wf = plane_record->Get_a_free_block(stream_id,false,isSLC);
 			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함
 		}
 
 		plane_record->Check_bookkeeping_correctness(page_address);
 	}
 
-	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address)
+	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address, bool isSLC)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];
 		plane_record->Valid_pages_count++;
-		plane_record->Free_pages_count--;		
-		page_address.BlockID = plane_record->GC_wf[stream_id]->BlockID;
-		page_address.PageID = plane_record->GC_wf[stream_id]->Current_page_write_index++;
+		plane_record->Free_pages_count--;
+
+		//수정 - 23.03.15
+		Block_Pool_Slot_Type * gc_wf = isSLC ? plane_record->GC_wf_slc[stream_id] : plane_record->GC_wf[stream_id];
+
+		page_address.BlockID = gc_wf->BlockID;
+		page_address.PageID = gc_wf->Current_page_write_index++;
 
 		//수정 - 23.03.14
-		bool isSLC = plane_record->GC_wf[stream_id]->isSLC;
+		//bool isSLC = plane_record->GC_wf[stream_id]->isSLC;
 		
 		//The current write frontier block is written to the end
-		if (plane_record->GC_wf[stream_id]->Current_page_write_index == plane_record->Data_wf[stream_id]->Last_page_index) {
+		if (gc_wf->Current_page_write_index == gc_wf->Last_page_index + 1) {
 			//Assign a new write frontier block
-			plane_record->GC_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false);
+			gc_wf = plane_record->Get_a_free_block(stream_id, false);
 			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address);
 		}
 		plane_record->Check_bookkeeping_correctness(page_address);
@@ -106,7 +98,7 @@ namespace SSD_Components
 		//Invalidate the remaining pages in the block
 		NVM::FlashMemory::Physical_Page_Address target_address(plane_address);
 		//while (plane_record->Data_wf[stream_id]->Current_page_write_index < pages_no_per_block) {
-		while (plane_record->Data_wf[stream_id]->Current_page_write_index < plane_record->Data_wf[stream_id]->Last_page_index) {
+		while (plane_record->Data_wf[stream_id]->Current_page_write_index < plane_record->Data_wf[stream_id]->Last_page_index + 1) {
 			plane_record->Free_pages_count--;
 			target_address.BlockID = plane_record->Data_wf[stream_id]->BlockID;
 			target_address.PageID = plane_record->Data_wf[stream_id]->Current_page_write_index++;
@@ -129,7 +121,7 @@ namespace SSD_Components
 		program_transaction_issued(page_address);
 
 		//The current write frontier block for translation pages is written to the end
-		if (plane_record->Translation_wf[streamID]->Current_page_write_index == plane_record->Data_wf[streamID]->Last_page_index) {
+		if (plane_record->Translation_wf[streamID]->Current_page_write_index == plane_record->Translation_wf[streamID]->Last_page_index + 1) {
 			//Assign a new write frontier block
 			plane_record->Translation_wf[streamID] = plane_record->Get_a_free_block(streamID, true);
 			if (!is_for_gc) {
