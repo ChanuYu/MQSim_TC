@@ -239,6 +239,9 @@ namespace SSD_Components
 			erase_count = consider_dynamic_wl ? block->Erase_count : 0;
 			pbke->free_slc_blocks.insert(std::pair<unsigned int, Block_Pool_Slot_Type*>(erase_count, block));
 			pbke->Free_block_pool.erase(pbke->Free_block_pool.begin());
+
+			//slc pool에 추가
+			pbke->slc_blocks.insert(std::pair<flash_block_ID_type,Block_Pool_Slot_Type*>(block->BlockID,block));
 		}
 
 		pbke->Free_pages_count -= num * pages_no_per_block;
@@ -256,7 +259,8 @@ namespace SSD_Components
 			//event 재등록
 			return; //아직 migration이 완료되지 않았으므로 event를 재등록하고 return
 		}
-		
+
+		std::map<flash_block_ID_type,Block_Pool_Slot_Type*>::iterator iter;
 		Block_Pool_Slot_Type *block = NULL;
 		unsigned int erase_count;
 		for(unsigned int i=0;i<num;i++){
@@ -266,6 +270,13 @@ namespace SSD_Components
 			erase_count = consider_dynamic_wl ? block->Erase_count : 0;
 			pbke->Free_block_pool.insert(std::pair<unsigned int, Block_Pool_Slot_Type*>(erase_count,block));
 			pbke->free_slc_blocks.erase(pbke->free_slc_blocks.begin());
+			
+			//slc pool에서 제거
+			iter = pbke->slc_blocks.find(block->BlockID);
+			if(iter != pbke->slc_blocks.end())
+				pbke->slc_blocks.erase(iter);
+			else
+				PRINT_ERROR("The block is not in SLC pool")
 		}
 	}
 

@@ -70,7 +70,7 @@ namespace SSD_Components
 		 * Free_block_pool <---> free_slc_blocks <---> Data(GC)_wf_slc <---> slc_blocks
 		*/
 		//std::deque<Block_Pool_Slot_Type*> slc_blocks; 
-		std::map<PPA_type,Block_Pool_Slot_Type*> slc_blocks; //slc모드로 programmed된 블록을 관리
+		std::map<flash_block_ID_type,Block_Pool_Slot_Type*> slc_blocks; //slc모드로 programmed된 블록을 관리
 		std::multimap<unsigned int, Block_Pool_Slot_Type*> free_slc_blocks; //아직 program되지 않은 slc블록 관리
 		Block_Pool_Slot_Type** Data_wf_slc, **GC_wf_slc;
 
@@ -108,7 +108,7 @@ namespace SSD_Components
 			unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int initial_slc_blk);
 		virtual ~Flash_Block_Manager_Base();
 		virtual void Allocate_block_and_page_in_plane_for_user_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool isSLC = false) = 0;
-		virtual void Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address) = 0;
+		virtual void Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool isSLC=false) = 0;
 		virtual void Allocate_block_and_page_in_plane_for_translation_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool is_for_gc) = 0;
 		virtual void Allocate_Pages_in_block_and_invalidate_remaining_for_preconditioning(const stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& plane_address, std::vector<NVM::FlashMemory::Physical_Page_Address>& page_addresses) = 0;
 		virtual void Invalidate_page_in_block(const stream_id_type streamID, const NVM::FlashMemory::Physical_Page_Address& address) = 0;

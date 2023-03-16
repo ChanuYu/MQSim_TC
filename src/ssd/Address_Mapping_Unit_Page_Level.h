@@ -43,6 +43,7 @@ namespace SSD_Components
 		data_timestamp_type TimeStamp;
 	};
 	
+	//default: SHARED
 	class Cached_Mapping_Table
 	{
 	public:
