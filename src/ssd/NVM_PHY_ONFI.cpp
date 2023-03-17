@@ -3,7 +3,7 @@
 namespace SSD_Components {
 	void NVM_PHY_ONFI::ConnectToTransactionServicedSignal(TransactionServicedHandlerType function)
 	{
-		//Data_Cache_Manager_Flash_Advanced::handle_transaction_serviced_signal_from_PHY
+		//handle_transaction_serviced_signal_from_PHY
 		connectedTransactionServicedHandlers.push_back(function);
 	}
 
@@ -18,7 +18,7 @@ namespace SSD_Components {
 	{
 		for (std::vector<TransactionServicedHandlerType>::iterator it = connectedTransactionServicedHandlers.begin();
 			it != connectedTransactionServicedHandlers.end(); it++) {
-			(*it)(transaction);// it => Data_Cache_Manager_Flash_Advanced::handle_transaction_serviced_signal_from_PHY
+			(*it)(transaction);// it => handle_transaction_serviced_signal_from_PHY
 		}
 		delete transaction;//This transaction has been consumed and no more needed
 	}

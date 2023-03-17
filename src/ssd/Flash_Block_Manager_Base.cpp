@@ -217,7 +217,7 @@ namespace SSD_Components
 		curNumOfSLCBlocks = num;
 	}
 
-	unsigned int PlaneBookKeepingType::getNumOfSLCBlocks()
+	unsigned int PlaneBookKeepingType::getCurNumOfSLCBlocks()
 	{
 		return curNumOfSLCBlocks;
 	}
@@ -280,6 +280,7 @@ namespace SSD_Components
 		}
 	}
 
+	//SLC 영역이 아닌 경우에 대해서 min, max 계산으로 변경
 	unsigned int Flash_Block_Manager_Base::Get_min_max_erase_difference(const NVM::FlashMemory::Physical_Page_Address& plane_address)
 	{
 		unsigned int min_erased_block = 0;
@@ -287,10 +288,10 @@ namespace SSD_Components
 		PlaneBookKeepingType *plane_record = &plane_manager[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID];
 
 		for (unsigned int i = 1; i < block_no_per_plane; i++) {
-			if (plane_record->Blocks[i].Erase_count > plane_record->Blocks[max_erased_block].Erase_count) {
+			if ((plane_record->Blocks[i].Erase_count > plane_record->Blocks[max_erased_block].Erase_count) && !plane_record->Blocks[i].isSLC) {
 				max_erased_block = i;
 			}
-			if (plane_record->Blocks[i].Erase_count < plane_record->Blocks[min_erased_block].Erase_count) {
+			if ((plane_record->Blocks[i].Erase_count < plane_record->Blocks[min_erased_block].Erase_count) && !plane_record->Blocks[i].isSLC) {
 				min_erased_block = i;
 			}
 		}
@@ -299,6 +300,8 @@ namespace SSD_Components
 	}
 
 	//수정 계획 - SLC 블록을 따로 반환하도록 수정
+	//사실상 GC_and_WL_Unit_Base::run_static_wearleveling()에 쓰이는 부분만 수정하면 됨
+	//wear-leveling을 사용하지 않으면 안고쳐도 됨
 	flash_block_ID_type Flash_Block_Manager_Base::Get_coldest_block_id(const NVM::FlashMemory::Physical_Page_Address& plane_address)
 	{
 		unsigned int min_erased_block = 0;
@@ -318,6 +321,7 @@ namespace SSD_Components
 		return &(plane_manager[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID]);
 	}
 
+	//block이 위치한 플레인의 Has_ongoing_gc_wl 변수 값 반환
 	bool Flash_Block_Manager_Base::Block_has_ongoing_gc_wl(const NVM::FlashMemory::Physical_Page_Address& block_address)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID];
@@ -330,6 +334,7 @@ namespace SSD_Components
 		return (plane_record->Blocks[block_address.BlockID].Ongoing_user_program_count + plane_record->Blocks[block_address.BlockID].Ongoing_user_read_count == 0);
 	}
 	
+	//plane_record->Blocks[block_address.BlockID].Has_ongoing_gc_wl = true;
 	void Flash_Block_Manager_Base::GC_WL_started(const NVM::FlashMemory::Physical_Page_Address& block_address)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID];

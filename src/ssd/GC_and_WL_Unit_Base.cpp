@@ -39,11 +39,14 @@ namespace SSD_Components
 		flash_controller->ConnectToTransactionServicedSignal(handle_transaction_serviced_signal_from_PHY);
 	}
 
+	//FCC에서 플래시 메모리에 트랜잭션을 수행하고 나서 호출되는 콜백함수
 	void GC_and_WL_Unit_Base::handle_transaction_serviced_signal_from_PHY(NVM_Transaction_Flash* transaction)
 	{
 		PlaneBookKeepingType* pbke = &(_my_instance->block_manager->plane_manager[transaction->Address.ChannelID][transaction->Address.ChipID][transaction->Address.DieID][transaction->Address.PlaneID]);
 
+		//GC_WL을 제외한 경우
 		switch (transaction->Source) {
+			//enum class Transaction_Source_Type { USERIO, CACHE, GC_WL, MAPPING };
 			case Transaction_Source_Type::USERIO:
 			case Transaction_Source_Type::MAPPING:
 			case Transaction_Source_Type::CACHE:
@@ -58,6 +61,7 @@ namespace SSD_Components
 					default:
 						PRINT_ERROR("Unexpected situation in the GC_and_WL_Unit_Base function!")
 				}
+				//transaction의 타겟이 존재하는 플레인에 진행 중인 gc_wl이 있을 경우 block erase 실행
 				if (_my_instance->block_manager->Block_has_ongoing_gc_wl(transaction->Address)) {
 					if (_my_instance->block_manager->Can_execute_gc_wl(transaction->Address)) {
 						NVM::FlashMemory::Physical_Page_Address gc_wl_candidate_address(transaction->Address);
@@ -102,6 +106,7 @@ namespace SSD_Components
 				return;
 		}
 
+		//GC_WL의 경우
 		switch (transaction->Type) {
 			case Transaction_Type::READ:
 			{
@@ -161,12 +166,8 @@ namespace SSD_Components
 
 				if (_my_instance->Stop_servicing_writes(transaction->Address)) {
 					PPA_type ppa = _my_instance->address_mapping_unit->Convert_address_to_ppa(transaction->Address);
-					bool isSLC = false;
 
-					if(pbke->slc_blocks.find(ppa)!=pbke->slc_blocks.end())
-						isSLC = true;
-
-					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(isSLC), transaction->Address);
+					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(transaction->is_slc()), transaction->Address);
 				}
 				break;
 			} //switch (transaction->Type)
@@ -227,11 +228,14 @@ namespace SSD_Components
 
 	bool GC_and_WL_Unit_Base::is_safe_gc_wl_candidate(const PlaneBookKeepingType* plane_record, const flash_block_ID_type gc_wl_candidate_block_id)
 	{
+		//수정 - 23.03.17
 		//The block shouldn't be a current write frontier
 		for (unsigned int stream_id = 0; stream_id < address_mapping_unit->Get_no_of_input_streams(); stream_id++) {
 			if ((&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->Data_wf[stream_id]
 				|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->Translation_wf[stream_id]
-				|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->GC_wf[stream_id]) {
+				|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->GC_wf[stream_id]
+				|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->Data_wf_slc[stream_id]
+				|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->GC_wf_slc[stream_id]) {
 				return false;
 			}
 		}
@@ -266,7 +270,8 @@ namespace SSD_Components
 		Block_Pool_Slot_Type* block = &pbke->Blocks[wl_candidate_block_id];
 
 		//Run the state machine to protect against race condition
-		block_manager->GC_WL_started(wl_candidate_block_id);
+		//block_manager->GC_WL_started(wl_candidate_block_id); //<-- 형변환 문제로 에러날 건데 일단 수정
+		block_manager->GC_WL_started(wl_candidate_address);
 		pbke->Ongoing_erase_operations.insert(wl_candidate_block_id);
 		address_mapping_unit->Set_barrier_for_accessing_physical_block(wl_candidate_address);//Lock the block, so no user request can intervene while the GC is progressing
 		if (block_manager->Can_execute_gc_wl(wl_candidate_address)) {//If there are ongoing requests targeting the candidate block, the gc execution should be postponed

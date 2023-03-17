@@ -212,7 +212,7 @@ void TSU_Priority_OutOfOrder::Schedule()
         return;
     }
 
-    //트랜잭션 유형별 TrxQueue에 추가
+    //Submit_transaction()에 의해 추가된 트랜잭션을 대상으로 트랜잭션 유형별 TrxQueue에 추가
     for (std::list<NVM_Transaction_Flash *>::iterator it = transaction_receive_slots.begin();
          it != transaction_receive_slots.end();
          it++)

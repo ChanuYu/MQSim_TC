@@ -36,6 +36,7 @@ namespace SSD_Components
 		stream_id_type Stream_id;
 	};
 
+	//Global Mapping Table Entry => total LPN 크기만큼의 엔트리가 존재
 	struct GMTEntryType//Entry type for the Global Mapping Table
 	{
 		PPA_type PPA;

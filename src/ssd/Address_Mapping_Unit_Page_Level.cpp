@@ -29,6 +29,7 @@ namespace SSD_Components
 			DEBUG("Address mapping table query - Stream ID:" << streamID << ", LPA:" << lpa << ", MISS")
 				return false;
 		}
+		//status: free, waiting, valid
 		if (it->second->Status != CMTEntryStatus::VALID) {
 			DEBUG("Address mapping table query - Stream ID:" << streamID << ", LPA:" << lpa << ", MISS")
 			return false;
@@ -44,7 +45,7 @@ namespace SSD_Components
 		auto it = addressMap.find(key);
 		assert(it != addressMap.end());
 		assert(it->second->Status == CMTEntryStatus::VALID);
-		lruList.splice(lruList.begin(), lruList, it->second->listPtr);
+		lruList.splice(lruList.begin(), lruList, it->second->listPtr); //다음 노드를 헤드로 이동
 		
 		return it->second->PPA;
 	}
@@ -109,6 +110,7 @@ namespace SSD_Components
 	{
 		LPA_type key = LPN_TO_UNIQUE_KEY(streamID, lpn);
 
+		//해당 LPN에 대한 슬랏이 존재
 		if (addressMap.find(key) != addressMap.end()) {
 			throw std::logic_error("Duplicate lpa insertion into CMT!");
 		}
@@ -122,7 +124,7 @@ namespace SSD_Components
 		lruList.push_front(std::pair<LPA_type, CMTSlotType*>(key, cmtEnt));
 		cmtEnt->Status = CMTEntryStatus::WAITING;
 		cmtEnt->listPtr = lruList.begin();
-		addressMap[key] = cmtEnt;
+		addressMap[key] = cmtEnt; //슬랏 생성
 	}
 
 	CMTSlotType Cached_Mapping_Table::Evict_one_slot(LPA_type& lpa)
@@ -263,6 +265,7 @@ namespace SSD_Components
 		}
 	}
 
+	//ideal_mapping의 경우 GlobalMappingTable[lpa].PPA 반환
 	inline PPA_type AddressMappingDomain::Get_ppa(const bool ideal_mapping, const stream_id_type stream_id, const LPA_type lpa)
 	{
 		if (ideal_mapping) {
@@ -536,7 +539,7 @@ namespace SSD_Components
 
 			if (translate_lpa_to_ppa(stream_id, transaction)) {
 				return true;
-			} else {
+			} else { //Stop_servicing_write() => GC 수행
 				mange_unsuccessful_translation(transaction);
 				return false;
 			}
@@ -587,7 +590,7 @@ namespace SSD_Components
 	*/
 	bool Address_Mapping_Unit_Page_Level::translate_lpa_to_ppa(stream_id_type streamID, NVM_Transaction_Flash* transaction)
 	{
-		//이전에 program된 데이터의 PPA를 CachedMapTable에서 가져옴
+		//이전에 program된 데이터의 PPA를 GlobalMapTable에서 가져옴
 		PPA_type ppa = domains[streamID]->Get_ppa(ideal_mapping_table, streamID, transaction->LPA);
 
 		if (transaction->Type == Transaction_Type::READ) {
@@ -602,6 +605,7 @@ namespace SSD_Components
 			return true;
 		} else {//This is a write transaction
 			allocate_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction); //plane 위치까지 결정
+			
 			//there are too few free pages remaining only for GC
 			if (ftl->GC_and_WL_Unit->Stop_servicing_writes(transaction->Address)){
 				return false;
@@ -770,6 +774,7 @@ namespace SSD_Components
 			allocate_page_in_plane_for_translation_write(transaction, (MVPN_type)transaction->LPA, true);
 			transaction->Physical_address_determined = true;
 		} else {
+			//ideal mapping이 아닌 경우
 			if (!domains[transaction->Stream_id]->Mapping_entry_accessible(ideal_mapping_table, transaction->Stream_id, transaction->LPA)) {
 				if (!domains[transaction->Stream_id]->CMT->Check_free_slot_availability()) {
 					LPA_type evicted_lpa;
@@ -832,6 +837,7 @@ namespace SSD_Components
 		}
 	}
 
+	//Plane 위치까지 결정
 	void Address_Mapping_Unit_Page_Level::allocate_plane_for_preconditioning(stream_id_type stream_id, LPA_type lpn, NVM::FlashMemory::Physical_Page_Address& targetAddress)
 	{
 		AddressMappingDomain* domain = domains[stream_id];
@@ -1149,6 +1155,8 @@ namespace SSD_Components
 		}
 	}
 
+	//pbke에서 page수 조정하고 블록 & 페이지까지 할당 + invalidate block도 수행
+	//gc를 위한 경우도 여기서 Allocate_block_and_page_in_plane_for_gc_write()를 호출함
 	void Address_Mapping_Unit_Page_Level::allocate_page_in_plane_for_user_write(NVM_Transaction_Flash_WR* transaction, bool is_for_gc)
 	{
 		AddressMappingDomain* domain = domains[transaction->Stream_id];
@@ -1193,7 +1201,7 @@ namespace SSD_Components
 		* function call in the above code blocks. Otherwise, GC may be invoked (due to the call to Allocate_block_....) and
 		* may decide to move a page that is just invalidated.*/
 		if (is_for_gc) {
-			block_manager->Allocate_block_and_page_in_plane_for_gc_write(transaction->Stream_id, transaction->Address);
+			block_manager->Allocate_block_and_page_in_plane_for_gc_write(transaction->Stream_id, transaction->Address, isSLC);
 		} else {
 			block_manager->Allocate_block_and_page_in_plane_for_user_write(transaction->Stream_id, transaction->Address, isSLC);
 		}
@@ -1752,6 +1760,7 @@ namespace SSD_Components
 		}
 	}
 
+	//Locked_LPAs에 존재하는지 확인
 	inline bool Address_Mapping_Unit_Page_Level::is_lpa_locked_for_gc(stream_id_type stream_id, LPA_type lpa)
 	{
 		return domains[stream_id]->Locked_LPAs.find(lpa) != domains[stream_id]->Locked_LPAs.end();
@@ -1762,6 +1771,7 @@ namespace SSD_Components
 		return domains[stream_id]->Locked_MVPNs.find(mvpn) != domains[stream_id]->Locked_MVPNs.end();
 	}
 
+	//Locked_LPAs에 추가
 	inline void Address_Mapping_Unit_Page_Level::Set_barrier_for_accessing_lpa(stream_id_type stream_id, LPA_type lpa)
 	{
 		auto itr = domains[stream_id]->Locked_LPAs.find(lpa);
@@ -1780,6 +1790,7 @@ namespace SSD_Components
 		domains[stream_id]->Locked_MVPNs.insert(mvpn);
 	}
 
+	//Set_barrier_for_accessing_lpa(mvpn) 호출 담당 + 그전에 메타데이터가 서로 일치하는지 확인
 	inline void Address_Mapping_Unit_Page_Level::Set_barrier_for_accessing_physical_block(const NVM::FlashMemory::Physical_Page_Address& block_address)
 	{
 		//The LPAs are actually not known until they are read one-by-one from flash storage. But, to reduce MQSim's complexity, we assume that LPAs are stored in DRAM and thus no read from flash storage is needed.
@@ -1921,12 +1932,15 @@ namespace SSD_Components
 		}
 	}
 
+	//translate_lpa_and_dispatch()쪽에서 stop_servicing_write에 의해 호출
+	//Write_transactions_for_overfull_planes에 transaction 추가
 	void Address_Mapping_Unit_Page_Level::mange_unsuccessful_translation(NVM_Transaction_Flash* transaction)
 	{
 		//Currently, the only unsuccessfull translation would be for program translations that are accessing a plane that is running out of free pages
 		Write_transactions_for_overfull_planes[transaction->Address.ChannelID][transaction->Address.ChipID][transaction->Address.DieID][transaction->Address.PlaneID].insert((NVM_Transaction_Flash_WR*)transaction);
 	}
 
+	//void GC_and_WL_Unit_Base::handle_transaction_serviced_signal_from_PHY에서 호출
 	void Address_Mapping_Unit_Page_Level::Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address)
 	{
 		std::set<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID];

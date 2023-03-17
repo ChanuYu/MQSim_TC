@@ -91,7 +91,7 @@ namespace SSD_Components
 		 * 23.03.02
 		 * 기존의 Free_block_pool에 모든 free block이 들어있다 가정, Flash Mode Controller에 의해 SLC 영역 조정 (확대/축소)
 		*/
-		unsigned int getNumOfSLCBlocks();
+		unsigned int getCurNumOfSLCBlocks();
 		void setNumOfSLCBlocks(unsigned int);
 	private:
 		unsigned int curNumOfSLCBlocks;

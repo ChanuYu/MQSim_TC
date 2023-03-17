@@ -73,7 +73,7 @@ namespace SSD_Components
             p_pbk->Add_to_free_block_pool(p_block,consider_dynamic_wl);
         }
 
-        int num_slc_blocks = p_pbk->getNumOfSLCBlocks() + num_blocks;
+        int num_slc_blocks = p_pbk->getCurNumOfSLCBlocks() + num_blocks;
         p_pbk->setNumOfSLCBlocks(num_slc_blocks);
 
         return num_blocks; //바뀐 블록 수 반환

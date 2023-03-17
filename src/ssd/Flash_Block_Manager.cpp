@@ -51,6 +51,7 @@ namespace SSD_Components
 		plane_record->Check_bookkeeping_correctness(page_address);
 	}
 
+	//gc_wf 블록에 주소 할당
 	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address, bool isSLC)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];
