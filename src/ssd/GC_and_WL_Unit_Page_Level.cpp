@@ -58,7 +58,6 @@ namespace SSD_Components
 					if (pbke->Ongoing_erase_operations.find(0) != pbke->Ongoing_erase_operations.end()) {
 						gc_candidate_block_id++;
 					}
-					//flash_block_ID_type block_idx = last_idx_of_slc_block
 					for (flash_block_ID_type block_id = 1; block_id < block_no_per_plane; block_id++) {
 						if (pbke->Blocks[block_id].Invalid_page_count > pbke->Blocks[gc_candidate_block_id].Invalid_page_count
 							&& pbke->Blocks[block_id].Current_page_write_index == pbke->Blocks[block_id].Last_page_index + 1 /*수정 - 23.03.03 pages_no_per_block*/
@@ -72,12 +71,11 @@ namespace SSD_Components
 				{
 					std::set<flash_block_ID_type> random_set;
 					while (random_set.size() < rga_set_size) {
-						//flash_block_ID_type block_id = random_generator.Uniform_uint(last_idx_of_slc_blocks + 1,block_no_per_plane - 1);
 						flash_block_ID_type block_id = random_generator.Uniform_uint(0, block_no_per_plane - 1);
 						if (pbke->Ongoing_erase_operations.find(block_id) == pbke->Ongoing_erase_operations.end()
 							&& is_safe_gc_wl_candidate(pbke, block_id)) {
 							random_set.insert(block_id);
-							}
+						}
 					}
 					gc_candidate_block_id = *random_set.begin();
 					for(auto &block_id : random_set) {

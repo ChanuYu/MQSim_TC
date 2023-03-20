@@ -61,7 +61,7 @@ namespace SSD_Components
 					default:
 						PRINT_ERROR("Unexpected situation in the GC_and_WL_Unit_Base function!")
 				}
-				//transaction의 타겟이 존재하는 플레인에 진행 중인 gc_wl이 있을 경우 block erase 실행
+				//transaction의 타겟이 존재하는 블록에 진행 중인 gc_wl이 있을 경우 block erase 실행
 				if (_my_instance->block_manager->Block_has_ongoing_gc_wl(transaction->Address)) {
 					if (_my_instance->block_manager->Can_execute_gc_wl(transaction->Address)) {
 						NVM::FlashMemory::Physical_Page_Address gc_wl_candidate_address(transaction->Address);
@@ -80,11 +80,13 @@ namespace SSD_Components
 									Stats::Total_page_movements_for_gc++;
 									gc_wl_candidate_address.PageID = pageID;
 									if (_my_instance->use_copyback) {
+										//플레인내에서 바로 이동
 										gc_wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
 											NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), NULL, 0, NULL, 0, INVALID_TIME_STAMP);
 										gc_wl_write->ExecutionMode = WriteExecutionModeType::COPYBACK;
 										_my_instance->tsu->Submit_transaction(gc_wl_write);
 									} else {
+										//플래시 메모리 내용 읽고 새로운 페이지에 쓰기
 										gc_wl_read = new NVM_Transaction_Flash_RD(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
 											NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), gc_wl_candidate_address, NULL, 0, NULL, 0, INVALID_TIME_STAMP);
 										gc_wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,

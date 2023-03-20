@@ -136,6 +136,8 @@ namespace NVM
 
 		void Flash_Chip::finish_command_execution(Flash_Command* command)
 		{
+			static int count = 0;
+
 			Die* targetDie = Dies[command->Address[0].DieID];
 
 			//수정 - 23.03.08

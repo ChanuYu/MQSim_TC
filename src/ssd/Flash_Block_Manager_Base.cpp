@@ -222,6 +222,11 @@ namespace SSD_Components
 		return curNumOfSLCBlocks;
 	}
 
+	bool PlaneBookKeepingType::isBlockInSLCPool(flash_block_ID_type block_id)
+	{
+		return slc_blocks.find(block_id) != slc_blocks.end();
+	}
+
 	//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
 	//plane별로 slc로 전환해야 할 블록의 수를 넘겨주면 각종 변수 조정 및 free_slc_block 풀로 이동
 	//호출시기: 미정
@@ -246,7 +251,7 @@ namespace SSD_Components
 
 		pbke->Free_pages_count -= num * pages_no_per_block;
 		pbke->Invalid_pages_count += num * pages_no_per_block;
-		pbke->setNumOfSLCBlocks(num);
+		pbke->setNumOfSLCBlocks(pbke->getCurNumOfSLCBlocks() + num);
 	}
 
 	//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()

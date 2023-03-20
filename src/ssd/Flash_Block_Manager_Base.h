@@ -86,13 +86,15 @@ namespace SSD_Components
 		
 		//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
 
-
 		/**
 		 * 23.03.02
 		 * 기존의 Free_block_pool에 모든 free block이 들어있다 가정, Flash Mode Controller에 의해 SLC 영역 조정 (확대/축소)
 		*/
 		unsigned int getCurNumOfSLCBlocks();
 		void setNumOfSLCBlocks(unsigned int);
+
+		//플레인 내에서 SLC 블록인지 확인
+		bool isBlockInSLCPool(flash_block_ID_type);
 	private:
 		unsigned int curNumOfSLCBlocks;
 	};

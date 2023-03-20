@@ -31,20 +31,20 @@ namespace SSD_Components
 		plane_record->Free_pages_count--;		
 		
 		//수정 - 23.03.10
-		Block_Pool_Slot_Type *data_wf = isSLC ? plane_record->Data_wf_slc[stream_id] : plane_record->Data_wf[stream_id];
+		Block_Pool_Slot_Type **data_wf = isSLC ? &plane_record->Data_wf_slc[stream_id] : &plane_record->Data_wf[stream_id];
 
-		page_address.BlockID = data_wf->BlockID;
-		page_address.PageID = data_wf->Current_page_write_index++;
-		
+		page_address.BlockID = (*data_wf)->BlockID;
+		page_address.PageID = (*data_wf)->Current_page_write_index++;
+
 		program_transaction_issued(page_address);
 
 		//수정 - 23.03.15
 		//The current write frontier block is written to the end
 		//prev: pages_no_per_block
-		if(data_wf->Current_page_write_index == data_wf->Last_page_index + 1) {
+		if((*data_wf)->Current_page_write_index == (*data_wf)->Last_page_index + 1) {
 			//Assign a new write frontier block
-			//plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false); //
-			data_wf = plane_record->Get_a_free_block(stream_id,false,isSLC);
+			//plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false);
+			(*data_wf) = plane_record->Get_a_free_block(stream_id,false,isSLC);
 			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함
 		}
 
@@ -59,18 +59,18 @@ namespace SSD_Components
 		plane_record->Free_pages_count--;
 
 		//수정 - 23.03.15
-		Block_Pool_Slot_Type * gc_wf = isSLC ? plane_record->GC_wf_slc[stream_id] : plane_record->GC_wf[stream_id];
+		Block_Pool_Slot_Type **gc_wf = isSLC ? &plane_record->GC_wf_slc[stream_id] : &plane_record->GC_wf[stream_id];
 
-		page_address.BlockID = gc_wf->BlockID;
-		page_address.PageID = gc_wf->Current_page_write_index++;
+		page_address.BlockID = (*gc_wf)->BlockID;
+		page_address.PageID = (*gc_wf)->Current_page_write_index++;
 
 		//수정 - 23.03.14
 		//bool isSLC = plane_record->GC_wf[stream_id]->isSLC;
 		
 		//The current write frontier block is written to the end
-		if (gc_wf->Current_page_write_index == gc_wf->Last_page_index + 1) {
+		if ((*gc_wf)->Current_page_write_index == (*gc_wf)->Last_page_index + 1) {
 			//Assign a new write frontier block
-			gc_wf = plane_record->Get_a_free_block(stream_id, false);
+			(*gc_wf) = plane_record->Get_a_free_block(stream_id, false);
 			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address);
 		}
 		plane_record->Check_bookkeeping_correctness(page_address);

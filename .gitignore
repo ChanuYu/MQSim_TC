@@ -7,3 +7,4 @@ workload_scenario*
 **.xml
 *.xml
 res*
+!ssdconfig.xml
