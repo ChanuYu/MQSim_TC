@@ -44,6 +44,7 @@ public:
     void Report_results_in_XML(std::string name_prefix, Utils::XmlWriter &xmlwriter);
 
 private:
+    //class Flash_Transaction_Queue : public std::list<NVM_Transaction_Flash*>
     Flash_Transaction_Queue ***UserReadTRQueue;
     Flash_Transaction_Queue ***UserWriteTRQueue;
     Flash_Transaction_Queue **GCReadTRQueue;

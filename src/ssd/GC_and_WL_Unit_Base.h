@@ -51,13 +51,13 @@ namespace SSD_Components
 		void Execute_simulator_event(MQSimEngine::Sim_Event*);
 
 		virtual bool GC_is_in_urgent_mode(const NVM::FlashMemory::Flash_Chip*) = 0;
-		virtual void Check_gc_required(const unsigned int BlockPoolSize, const NVM::FlashMemory::Physical_Page_Address& planeAddress) = 0;
+		virtual void Check_gc_required(const unsigned int BlockPoolSize, const NVM::FlashMemory::Physical_Page_Address& planeAddress, bool is_slc = false) = 0;
 		GC_Block_Selection_Policy_Type Get_gc_policy();
 		unsigned int Get_GC_policy_specific_parameter();//Returns the parameter specific to the GC block selection policy: threshold for random_pp, set_size for RGA
 		unsigned int Get_minimum_number_of_free_pages_before_GC();
 		bool Use_dynamic_wearleveling();
 		bool Use_static_wearleveling();
-		bool Stop_servicing_writes(const NVM::FlashMemory::Physical_Page_Address& plane_address);
+		bool Stop_servicing_writes(const NVM::FlashMemory::Physical_Page_Address& plane_address, bool is_slc = false);
 	protected:
 		GC_Block_Selection_Policy_Type block_selection_policy;
 		static GC_and_WL_Unit_Base * _my_instance;

@@ -116,8 +116,8 @@ namespace SSD_Components
 		virtual void Invalidate_page_in_block(const stream_id_type streamID, const NVM::FlashMemory::Physical_Page_Address& address) = 0;
 		virtual void Invalidate_page_in_block_for_preconditioning(const stream_id_type streamID, const NVM::FlashMemory::Physical_Page_Address& address) = 0;
 		virtual void Add_erased_block_to_pool(const NVM::FlashMemory::Physical_Page_Address& address) = 0;
-		virtual unsigned int Get_pool_size(const NVM::FlashMemory::Physical_Page_Address& plane_address) = 0;
-		flash_block_ID_type Get_coldest_block_id(const NVM::FlashMemory::Physical_Page_Address& plane_address);
+		virtual unsigned int Get_pool_size(const NVM::FlashMemory::Physical_Page_Address& plane_address, bool is_slc = false) = 0;
+		flash_block_ID_type Get_coldest_block_id(const NVM::FlashMemory::Physical_Page_Address& plane_address, bool is_slc = false);
 		unsigned int Get_min_max_erase_difference(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		void Set_GC_and_WL_Unit(GC_and_WL_Unit_Base* );
 		void setFlashModeController(Flash_Mode_Controller*);
@@ -134,7 +134,11 @@ namespace SSD_Components
 		
 		//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
 		void transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false);
-		void transformToTLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false); 
+		void transformToTLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false);
+
+		//모든 플레인이 동일한 slc 블록 수를 갖고 있는 것은 아님 => 대략적인 현상황을 알리는 척도로만 사용
+		//현재 플레인별 블록수를 어떻게 맞출지는 정하지 않음
+		unsigned int getCurrSLCBlocksPerPlane() {return current_slc_blocks_per_plane;}
 	protected:
 		PlaneBookKeepingType ****plane_manager;//Keeps track of plane block usage information
 		GC_and_WL_Unit_Base *gc_and_wl_unit;
@@ -150,6 +154,7 @@ namespace SSD_Components
 		void program_transaction_issued(const NVM::FlashMemory::Physical_Page_Address& page_address);//Updates the block bookkeeping record
 	
 		unsigned int initial_slc_blk_per_plane;
+		unsigned int current_slc_blocks_per_plane;
 	};
 }
 

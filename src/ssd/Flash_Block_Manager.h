@@ -22,7 +22,7 @@ namespace SSD_Components
 		void Invalidate_page_in_block(const stream_id_type streamID, const NVM::FlashMemory::Physical_Page_Address& address);
 		void Invalidate_page_in_block_for_preconditioning(const stream_id_type streamID, const NVM::FlashMemory::Physical_Page_Address& address);
 		void Add_erased_block_to_pool(const NVM::FlashMemory::Physical_Page_Address& address);
-		unsigned int Get_pool_size(const NVM::FlashMemory::Physical_Page_Address& plane_address);
+		unsigned int Get_pool_size(const NVM::FlashMemory::Physical_Page_Address& plane_address, bool is_slc = false);
 	private:
 	};
 }

@@ -133,7 +133,7 @@ namespace SSD_Components {
 		std::list<NVM_Transaction_Flash*>::iterator iter = transaction_list.begin();
 		for(;iter!=transaction_list.end();iter++)
 		{
-			if(!(*iter)->is_slc())
+			if(!(*iter)->isSLCTrx)
 				return false;
 		}
 
@@ -185,6 +185,7 @@ namespace SSD_Components {
 		}
 
 		sim_time_type suspendTime = 0;
+		//같은 target die내에 command 처리 중 + suspendrequired인 경우 suspend queue에 추가
 		if (!dieBKE->Free) {
 			if (transaction_list.front()->SuspendRequired) {
 				switch (dieBKE->ActiveTransactions.front()->Type) {
@@ -200,7 +201,7 @@ namespace SSD_Components {
 						PRINT_ERROR("Read suspension is not supported!")
 				}
 				targetChip->Suspend(transaction_list.front()->Address.DieID);
-				dieBKE->PrepareSuspend();
+				dieBKE->PrepareSuspend(); //diebke의 active transactons를 suspended transactions 리스트에 추가
 				if (chipBKE->OngoingDieCMDTransfers.size()) {
 					chipBKE->PrepareSuspend();
 				}
@@ -256,7 +257,7 @@ namespace SSD_Components {
 					Simulator->Register_sim_event(Simulator->Time() + suspendTime + target_channel->ReadCommandTime[transaction_list.size()], this,
 						dieBKE, (int)NVDDR2_SimEventType::READ_CMD_ADDR_TRANSFERRED);
 				} else {
-					//이전에 다이로 보낸 커맨드를 아직 전송 중에 있음
+					//이전에 칩으로 보낸 커맨드를 아직 전송 중에 있음 => die interleaving의 경우
 					dieBKE->DieInterleavedTime = suspendTime + target_channel->ReadCommandTime[transaction_list.size()];
 					chipBKE->Last_transfer_finish_time += suspendTime + target_channel->ReadCommandTime[transaction_list.size()];
 				}
@@ -289,13 +290,14 @@ namespace SSD_Components {
 						(*it)->STAT_transfer_time += target_channel->ProgramCommandTime[transaction_list.size()] + NVDDR2DataInTransferTime((*it)->Data_and_metadata_size_in_byte, target_channel);
 						data_transfer_time += NVDDR2DataInTransferTime((*it)->Data_and_metadata_size_in_byte, target_channel);
 					}
+					//칩으로 처음 커맨드를 보내는 경우
 					if (chipBKE->OngoingDieCMDTransfers.size() == 0) {
 						targetChip->StartCMDDataInXfer();
 						chipBKE->Status = ChipStatus::CMD_DATA_IN;
 						chipBKE->Last_transfer_finish_time = Simulator->Time() + suspendTime + target_channel->ProgramCommandTime[transaction_list.size()] + data_transfer_time;
 						Simulator->Register_sim_event(Simulator->Time() + suspendTime + target_channel->ProgramCommandTime[transaction_list.size()] + data_transfer_time,
 							this, dieBKE, (int)NVDDR2_SimEventType::PROGRAM_CMD_ADDR_DATA_TRANSFERRED);
-					} else {
+					} else { //die-interleaving의 경우
 						dieBKE->DieInterleavedTime = suspendTime + target_channel->ProgramCommandTime[transaction_list.size()] + data_transfer_time;
 						chipBKE->Last_transfer_finish_time += suspendTime + target_channel->ProgramCommandTime[transaction_list.size()] + data_transfer_time;
 					}
@@ -384,7 +386,7 @@ namespace SSD_Components {
 		channels[((NVM::FlashMemory::Physical_Page_Address*)address)->ChannelID]->Chips[((NVM::FlashMemory::Physical_Page_Address*)address)->ChipID]->Change_memory_status_preconditioning(address, status_info);
 	}
 
-	//if (address.PlaneID == read_transaction->Address.PlaneID) {read_transaction->LPA = command->Meta_data[i].LPA;} 수행
+	//command의 타겟 플레인 주소와 read_transaction의 플레인 주소가 같은 경우, read_transaction->LPA = command->Meta_data[i].LPA;
 	void copy_read_data_to_transaction(NVM_Transaction_Flash_RD* read_transaction, NVM::FlashMemory::Flash_Command* command)
 	{
 		int i = 0;
@@ -423,7 +425,7 @@ namespace SSD_Components {
 				break;
 			case NVDDR2_SimEventType::ERASE_SETUP_COMPLETED:
 				//DEBUG2("Chip " << targetChip->ChannelID << ", " << targetChip->ChipID << ", " << dieBKE->ActiveTransactions.front()->Address.DieID << ": ERASE_SETUP_COMPLETED ")
-				targetChip->EndCMDXfer(dieBKE->ActiveCommand);
+				targetChip->EndCMDXfer(dieBKE->ActiveCommand);// -> start_execution()에서 end event 등록 -> finish_execution()에서 handle_chip_ready_signal() 핸들러 호출
 				for (auto &tr : dieBKE->ActiveTransactions) {
 					tr->STAT_execution_time = dieBKE->Expected_finish_time - Simulator->Time();
 				}
@@ -552,6 +554,7 @@ namespace SSD_Components {
 	}
 
 	//버스가 IDLE이면 data transfer 수행, IDLE이 아니면 waitingTrxQueue에 추가
+	//broadcast_ready_signal() 함수의 핸들러, Flash_Chip::finish_command_execution() 마지막에 호출됨
 	inline void NVM_PHY_ONFI_NVDDR2::handle_ready_signal_from_chip(NVM::FlashMemory::Flash_Chip* chip, NVM::FlashMemory::Flash_Command* command)
 	{
 		ChipBookKeepingEntry *chipBKE = &_my_instance->bookKeepingTable[chip->ChannelID][chip->ChipID];

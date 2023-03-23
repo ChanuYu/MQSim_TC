@@ -279,7 +279,7 @@ void TSU_Priority_OutOfOrder::Schedule()
     {
         if (_NVMController->Get_channel_status(channelID) == BusChannelStatus::IDLE)
         {
-            for (unsigned int i = 0; i < chip_no_per_channel; i++)
+            for (unsigned int i = 0; i < chip_no_per_channel; i++) //chip level interleaving
             {
                 NVM::FlashMemory::Flash_Chip *chip = _NVMController->Get_chip(channelID, Round_robin_turn_of_channel[channelID]);
                 //The TSU does not check if the chip is idle or not since it is possible to suspend a busy chip and issue a new command
@@ -290,9 +290,11 @@ void TSU_Priority_OutOfOrder::Schedule()
                         service_erase_transaction(chip);
                     }
                 }
+                //채널내의 칩을 라운드로빈 방식으로 할당
                 Round_robin_turn_of_channel[channelID] = (flash_chip_ID_type)(Round_robin_turn_of_channel[channelID] + 1) % chip_no_per_channel;
                 if (_NVMController->Get_channel_status(chip->ChannelID) != BusChannelStatus::IDLE)
                 {
+                    //채널에 작업이 할당되면 다음 채널로 이동
                     break;
                 }
             }
@@ -369,7 +371,7 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
         {
             return false; //service_write_trx()실행
         }
-        else
+        else //readTrx 하나 실행
         {
             sourceQueue1 = get_next_read_service_queue(chip);
             if (sourceQueue1 == NULL)
@@ -383,18 +385,18 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
     {
         //If GC is currently executed in the preemptive mode, then user IO transaction queues are checked first
         sourceQueue1 = get_next_read_service_queue(chip);
-        if (sourceQueue1 != NULL)
+        if (sourceQueue1 != NULL) //readtrx 실행
         {
             if (GCReadTRQueue[chip->ChannelID][chip->ChipID].size() > 0)
             {
                 sourceQueue2 = &GCReadTRQueue[chip->ChannelID][chip->ChipID];
             }
         }
-        else if (get_next_write_service_queue(chip) != NULL)
+        else if (get_next_write_service_queue(chip) != NULL) //대기 중인 readTrx가 존재하지 않음 -> writeTrx 실행
         {
             return false; //service_write_trx()실행
         }
-        else if (GCReadTRQueue[chip->ChannelID][chip->ChipID].size() > 0)
+        else if (GCReadTRQueue[chip->ChannelID][chip->ChipID].size() > 0) //write도 없으면 GCRead만 실행
         {
             sourceQueue1 = &GCReadTRQueue[chip->ChannelID][chip->ChipID];
         }
@@ -487,9 +489,9 @@ bool TSU_Priority_OutOfOrder::service_write_transaction(NVM::FlashMemory::Flash_
         }
         else if (GCEraseTRQueue[chip->ChannelID][chip->ChipID].size() > 0)
         {
-            return false;
+            return false; //service_erase_transaction() 실행
         }
-        else
+        else //trx 하나만 처리
         {
             sourceQueue1 = get_next_write_service_queue(chip);
             if(sourceQueue1 == NULL)

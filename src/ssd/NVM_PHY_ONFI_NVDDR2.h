@@ -38,6 +38,7 @@ namespace SSD_Components
 		sim_time_type RemainingExecTime;
 		sim_time_type DieInterleavedTime;//If the command transfer is done in die-interleaved mode, the transfer time is recorded in this temporary variable
 
+		//ActiveCommand 및 ActiveTransactions를 SuspendedCommand, SuspendedTransactions로 변경
 		void PrepareSuspend()
 		{
 			SuspendedCommand = ActiveCommand;

@@ -81,9 +81,10 @@ namespace SSD_Components
 			transaction_dispatch_slots.clear();
 			planeVector = 0;
 
+			//sourceQueue1에서 multiplane이 가능한지 확인
 			for (Flash_Transaction_Queue::iterator it = sourceQueue1->begin(); it != sourceQueue1->end();)
 			{
-				if (transaction_is_ready(*it) && (*it)->Address.DieID == dieID && !(planeVector & 1 << (*it)->Address.PlaneID))
+				if (transaction_is_ready(*it) && (*it)->Address.DieID == dieID && !(planeVector & 1 << (*it)->Address.PlaneID)) //현재까지 multiplane 적용한 것과 다르면
 				{
 					//Check for identical pages when running multiplane command
 					if (planeVector == 0 || (*it)->Address.PageID == pageID)
@@ -99,6 +100,7 @@ namespace SSD_Components
 				it++;
 			}
 
+			//마찬가지로 sourceQueue2에 대하여 multiplane 가능 여부 확인
 			if (sourceQueue2 != NULL && transaction_dispatch_slots.size() < plane_no_per_die)
 			{
 				for (Flash_Transaction_Queue::iterator it = sourceQueue2->begin(); it != sourceQueue2->end();)
@@ -124,14 +126,16 @@ namespace SSD_Components
 			{
 				_NVMController->Send_command_to_chip(transaction_dispatch_slots);
 				transaction_dispatch_slots.clear();
-				dieID = (dieID + 1) % die_no_per_chip;
-				return true;
+				dieID = (dieID + 1) % die_no_per_chip; //die interleaving
+
+				//수정계획 - 23.03.22 die-interleaving이 실행되려면 return을 없애야 함
+				//return true;
 			}
 			else
 			{
 				transaction_dispatch_slots.clear();
 				dieID = (dieID + 1) % die_no_per_chip;
-				return false;
+				return false; //더 이상 존재하지 않으므로 return
 			}			
 		}
 

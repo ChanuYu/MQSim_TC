@@ -10,7 +10,7 @@ namespace SSD_Components
 		unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int initial_slc_blk)
 		: gc_and_wl_unit(gc_and_wl_unit), max_allowed_block_erase_count(max_allowed_block_erase_count), total_concurrent_streams_no(total_concurrent_streams_no),
 		channel_count(channel_count), chip_no_per_channel(chip_no_per_channel), die_no_per_chip(die_no_per_chip), plane_no_per_die(plane_no_per_die),
-		block_no_per_plane(block_no_per_plane), pages_no_per_block(page_no_per_block), initial_slc_blk_per_plane(initial_slc_blk)
+		block_no_per_plane(block_no_per_plane), pages_no_per_block(page_no_per_block), initial_slc_blk_per_plane(initial_slc_blk), current_slc_blocks_per_plane(initial_slc_blk)
 	{
 		//23.03.03
 		initial_pages_per_blk = pages_no_per_block;
@@ -139,6 +139,7 @@ namespace SSD_Components
 	{
 		Block_Pool_Slot_Type* new_block = NULL;
 		std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = for_slc ? free_slc_blocks : Free_block_pool;
+		//std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = Free_block_pool;
 		new_block = (*free_block_pool.begin()).second;//Assign a new write frontier block
 		if (free_block_pool.size() == 0) {
 			PRINT_ERROR("Requesting a free block from an empty pool!")
@@ -307,18 +308,33 @@ namespace SSD_Components
 	//수정 계획 - SLC 블록을 따로 반환하도록 수정
 	//사실상 GC_and_WL_Unit_Base::run_static_wearleveling()에 쓰이는 부분만 수정하면 됨
 	//wear-leveling을 사용하지 않으면 안고쳐도 됨
-	flash_block_ID_type Flash_Block_Manager_Base::Get_coldest_block_id(const NVM::FlashMemory::Physical_Page_Address& plane_address)
+	flash_block_ID_type Flash_Block_Manager_Base::Get_coldest_block_id(const NVM::FlashMemory::Physical_Page_Address& plane_address, bool is_slc)
 	{
-		unsigned int min_erased_block = 0;
 		PlaneBookKeepingType *plane_record = &plane_manager[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID];
 
-		for (unsigned int i = 1; i < block_no_per_plane; i++) {
-			if (plane_record->Blocks[i].Erase_count < plane_record->Blocks[min_erased_block].Erase_count) {
-				min_erased_block = i;
+		if(is_slc)
+		{
+			std::map<flash_block_ID_type,Block_Pool_Slot_Type*>::iterator iter = plane_record->slc_blocks.begin();
+			Block_Pool_Slot_Type *p_min_erased_block = iter->second;
+			std::advance(iter,1);
+			for(;iter!=plane_record->slc_blocks.end();iter++){
+				if(iter->second->Erase_count < p_min_erased_block->Erase_count)
+					p_min_erased_block = iter->second;
 			}
+
+			return p_min_erased_block->BlockID;
 		}
-		
-		return min_erased_block;
+		else {
+			unsigned int min_erased_block = 0;
+			for (unsigned int i = 1; i < block_no_per_plane; i++) {
+				if(!plane_record->isBlockInSLCPool(i)) {
+					if (plane_record->Blocks[i].Erase_count < plane_record->Blocks[min_erased_block].Erase_count) {
+						min_erased_block = i;
+					}
+				}	
+			}
+			return min_erased_block;
+		}	
 	}
 
 	PlaneBookKeepingType* Flash_Block_Manager_Base::Get_plane_bookkeeping_entry(const NVM::FlashMemory::Physical_Page_Address& plane_address)

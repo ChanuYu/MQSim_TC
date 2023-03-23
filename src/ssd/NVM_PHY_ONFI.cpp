@@ -13,6 +13,8 @@ namespace SSD_Components {
 	* Address_Mapping_Unit: For mapping reads and writes
 	* TSU: For the reads that must be finished for partial writes (first read non updated parts of page data and then merge and write them into the new page)
 	* GarbageCollector: For gc reads, writes, and erases
+	* 
+	* ##handle_transaction_serviced_signal_from_PHY
 	*/
 	void NVM_PHY_ONFI::broadcastTransactionServicedSignal(NVM_Transaction_Flash* transaction)
 	{

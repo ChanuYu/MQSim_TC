@@ -200,7 +200,7 @@ namespace NVM
 			}
 
 			//In MQSim, flash chips always announce their status using the ready/busy signal; the controller does not issue a die status read command
-			broadcast_ready_signal(command);
+			broadcast_ready_signal(command); //handle_ready_signal_from_chip() 호출
 			//실행 이후 호스트쪽으로 보내는 것 처리
 		}
 

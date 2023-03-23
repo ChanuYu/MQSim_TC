@@ -38,12 +38,9 @@ namespace NVM
 			std::vector<Physical_Page_Address> Address;
 			std::vector<PageMetadata> Meta_data;
 
-			//23.03.06
-			bool is_slc() {return is_all_trx_slc;}
-			void set_slc() {is_all_trx_slc = true;}
-			Flash_Command(bool is_all_trx_slc=false):is_all_trx_slc(is_all_trx_slc){}
-		private:
 			bool is_all_trx_slc;
+			//23.03.06
+			Flash_Command(bool is_all_trx_slc=false):is_all_trx_slc(is_all_trx_slc){}
 		};
 	}
 }

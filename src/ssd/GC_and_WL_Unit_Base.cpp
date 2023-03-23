@@ -166,10 +166,10 @@ namespace SSD_Components
 				}
 				_my_instance->address_mapping_unit->Start_servicing_writes_for_overfull_plane(transaction->Address);//Must be inovked after above statements since it may lead to flash page consumption for waiting program transactions
 
-				if (_my_instance->Stop_servicing_writes(transaction->Address)) {
+				if (_my_instance->Stop_servicing_writes(transaction->Address,transaction->isSLCTrx)) {
 					PPA_type ppa = _my_instance->address_mapping_unit->Convert_address_to_ppa(transaction->Address);
 
-					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(transaction->is_slc()), transaction->Address);
+					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(transaction->isSLCTrx), transaction->Address);
 				}
 				break;
 			} //switch (transaction->Type)
@@ -222,10 +222,12 @@ namespace SSD_Components
 		return static_wearleveling_enabled;
 	}
 	
-	bool GC_and_WL_Unit_Base::Stop_servicing_writes(const NVM::FlashMemory::Physical_Page_Address& plane_address)
+	//SLC trx를 처리한 경우와 TLC trx를 처리한 경우로 나눠서 처리해야 함
+	//Address_Mapping_Unit_Page_Level::translate_lpa_to_ppa(), GC_and_WL_Unit_Base::handle_transaction_serviced_signal_from_PHY()에서 호출
+	bool GC_and_WL_Unit_Base::Stop_servicing_writes(const NVM::FlashMemory::Physical_Page_Address& plane_address, bool is_slc)
 	{
 		PlaneBookKeepingType* pbke = &(_my_instance->block_manager->plane_manager[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID]);
-		return block_manager->Get_pool_size(plane_address) < max_ongoing_gc_reqs_per_plane;
+		return block_manager->Get_pool_size(plane_address, is_slc) < max_ongoing_gc_reqs_per_plane;
 	}
 
 	bool GC_and_WL_Unit_Base::is_safe_gc_wl_candidate(const PlaneBookKeepingType* plane_record, const flash_block_ID_type gc_wl_candidate_block_id)

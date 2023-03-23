@@ -171,8 +171,12 @@ namespace SSD_Components
 		plane_record->Check_bookkeeping_correctness(block_address);
 	}
 
-	inline unsigned int Flash_Block_Manager::Get_pool_size(const NVM::FlashMemory::Physical_Page_Address& plane_address)
+	inline unsigned int Flash_Block_Manager::Get_pool_size(const NVM::FlashMemory::Physical_Page_Address& plane_address, bool is_slc)
 	{
-		return (unsigned int) plane_manager[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID].Free_block_pool.size();
+		PlaneBookKeepingType *pbke = Get_plane_bookkeeping_entry(plane_address);
+
+		const std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = is_slc ? pbke->free_slc_blocks : pbke->Free_block_pool;
+		//return (unsigned int) plane_manager[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID].Free_block_pool.size();
+		return free_block_pool.size();
 	}
 }

@@ -607,7 +607,7 @@ namespace SSD_Components
 			allocate_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction); //plane 위치까지 결정
 			
 			//there are too few free pages remaining only for GC
-			if (ftl->GC_and_WL_Unit->Stop_servicing_writes(transaction->Address)){
+			if (ftl->GC_and_WL_Unit->Stop_servicing_writes(transaction->Address,transaction->isSLCTrx)){
 				return false;
 			}
 			allocate_page_in_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction, false);

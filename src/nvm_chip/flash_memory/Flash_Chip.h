@@ -33,6 +33,7 @@ namespace NVM
 			flash_channel_ID_type ChannelID;
 			flash_chip_ID_type ChipID;         //Flashchip position in its related channel
 
+			//Flash_Chip의 lastTransferStart 시간 조정
 			void StartCMDXfer()
 			{
 				this->lastTransferStart = Simulator->Time();
@@ -45,7 +46,8 @@ namespace NVM
 			{
 				this->lastTransferStart = Simulator->Time();
 			}
-			void EndCMDXfer(Flash_Command* command)//End transferring write data to the Flash chip
+			//End transferring write data to the Flash chip
+			void EndCMDXfer(Flash_Command* command)
 			{
 				this->STAT_totalXferTime += (Simulator->Time() - this->lastTransferStart);
 				if (this->idleDieNo != die_no)
@@ -56,7 +58,8 @@ namespace NVM
 
 				this->lastTransferStart = INVALID_TIME;
 			}
-			void EndCMDDataInXfer(Flash_Command* command)//End transferring write data of a group of multi-plane transactions to the Flash chip
+			//End transferring write data of a group of multi-plane transactions to the Flash chip
+			void EndCMDDataInXfer(Flash_Command* command)
 			{
 				this->STAT_totalXferTime += (Simulator->Time() - this->lastTransferStart);
 				if (this->idleDieNo != die_no)
@@ -120,7 +123,7 @@ namespace NVM
 				command_code_type CMDCode = command->CommandCode;
 				sim_time_type read_time, program_time, erase_time;
 
-				if(command->is_slc())
+				if(command->is_all_trx_slc)
 				{
 					read_time = slc_read_latency;
 					program_time = slc_program_latency;
