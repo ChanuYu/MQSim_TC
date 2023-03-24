@@ -227,7 +227,9 @@ namespace SSD_Components
 	bool GC_and_WL_Unit_Base::Stop_servicing_writes(const NVM::FlashMemory::Physical_Page_Address& plane_address, bool is_slc)
 	{
 		PlaneBookKeepingType* pbke = &(_my_instance->block_manager->plane_manager[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID]);
-		return block_manager->Get_pool_size(plane_address, is_slc) < max_ongoing_gc_reqs_per_plane;
+		//아직 인터페이스가 완성되지 않아서 SLC 영역 풀 사이즈를 반환할 경우 write가 서비스되지 않음 => 차후 수정 필요
+		//return block_manager->Get_pool_size(plane_address, is_slc) < max_ongoing_gc_reqs_per_plane;
+		return block_manager->Get_pool_size(plane_address, false) < max_ongoing_gc_reqs_per_plane;
 	}
 
 	bool GC_and_WL_Unit_Base::is_safe_gc_wl_candidate(const PlaneBookKeepingType* plane_record, const flash_block_ID_type gc_wl_candidate_block_id)

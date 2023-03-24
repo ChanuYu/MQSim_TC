@@ -5,7 +5,6 @@
 #include "IO_Flow_Base.h"
 #include "../utils/RandomGenerator.h"
 #include "../utils/DistributionTypes.h"
-#include "NextRequestTime.h"
 
 namespace Host_Components
 {
@@ -29,8 +28,6 @@ public:
 	void Execute_simulator_event(MQSimEngine::Sim_Event *);
 	void Get_statistics(Utils::Workload_Statistics &stats, LPA_type (*Convert_host_logical_address_to_device_address)(LHA_type lha),
 						page_status_type (*Find_NVM_subunit_access_bitmap)(LHA_type lha));
-	NextRequestTime *nrt;
-	void setNextTimeToDevice(sim_time_type);
 
 private:
 	double read_ratio;

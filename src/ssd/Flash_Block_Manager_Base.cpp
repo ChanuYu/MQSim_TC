@@ -138,8 +138,10 @@ namespace SSD_Components
 	Block_Pool_Slot_Type* PlaneBookKeepingType::Get_a_free_block(stream_id_type stream_id, bool for_mapping_data, bool for_slc)
 	{
 		Block_Pool_Slot_Type* new_block = NULL;
-		std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = for_slc ? free_slc_blocks : Free_block_pool;
-		//std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = Free_block_pool;
+		
+		//SLC 영역 내에서의 GC가 구현될 때까지 보류
+		//std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = for_slc ? free_slc_blocks : Free_block_pool;
+		std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = Free_block_pool;
 		new_block = (*free_block_pool.begin()).second;//Assign a new write frontier block
 		if (free_block_pool.size() == 0) {
 			PRINT_ERROR("Requesting a free block from an empty pool!")

@@ -106,6 +106,7 @@ inline void Input_Stream_Manager_NVMe::Handle_serviced_request(User_Request *req
 	((Input_Stream_NVMe *)input_streams[request->Stream_id])->Waiting_user_requests.remove(request);
 	((Input_Stream_NVMe *)input_streams[stream_id])->On_the_fly_requests--;
 
+	//std::cout<<"** Host Interface: Request #" << request->ID << " from stream #" << request->Stream_id << " is finished"<<std::endl;
 	DEBUG("** Host Interface: Request #" << request->ID << " from stream #" << request->Stream_id << " is finished")
 
 	//If this is a read request, then the read data should be written to host memory
@@ -304,6 +305,7 @@ void Request_Fetch_Unit_NVMe::Process_pcie_write_message(uint64_t address, void 
 //write request의 경우 Handle_new_arrived_data()->Fetch_write_data()에 의해 이벤트가 등록됨
 void Request_Fetch_Unit_NVMe::Process_pcie_read_message(uint64_t address, void *payload, unsigned int payload_size)
 {
+	static int req_count_for_debug = -1;
 	Host_Interface_NVMe *hi = (Host_Interface_NVMe *)host_interface;
 	DMA_Req_Item *dma_req_item = dma_list.front();
 	dma_list.pop_front();
@@ -312,6 +314,7 @@ void Request_Fetch_Unit_NVMe::Process_pcie_read_message(uint64_t address, void *
 	{
 	case DMA_Req_Type::REQUEST_INFO:
 	{
+		req_count_for_debug++;
 		User_Request *new_request = new User_Request;
 		new_request->IO_command_info = payload;
 		new_request->Stream_id = (stream_id_type)((uint64_t)(dma_req_item->object));

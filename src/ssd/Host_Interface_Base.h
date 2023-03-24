@@ -115,6 +115,7 @@ namespace SSD_Components
 			connected_user_request_arrived_signal_handlers.push_back(function);
 		}
 
+		//PCIe를 통해 디바이스에 도착
 		void Consume_pcie_message(Host_Components::PCIe_Message* message)
 		{
 			if (message->Type == Host_Components::PCIe_Message_Type::READ_COMP) {
@@ -128,6 +129,7 @@ namespace SSD_Components
 	
 		SLC_Table *slc_table;
 
+		//PCIe Switch를 통해 호스트로 전달
 		void Send_read_message_to_host(uint64_t addresss, unsigned int request_read_data_size);
 		void Send_write_message_to_host(uint64_t addresss, void* message, unsigned int message_size);
 

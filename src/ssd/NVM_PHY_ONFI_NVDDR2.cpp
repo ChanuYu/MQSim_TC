@@ -408,7 +408,7 @@ namespace SSD_Components {
 
 		switch ((NVDDR2_SimEventType)ev->Type) {
 			case NVDDR2_SimEventType::READ_CMD_ADDR_TRANSFERRED:
-				//DEBUG2("Chip " << targetChip->ChannelID << ", " << targetChip->ChipID << ", " << dieBKE->ActiveTransactions.front()->Address.DieID << ": READ_CMD_ADDR_TRANSFERRED ")
+				//DEBUG2("Chip " << targetChip->ChannelID << ", " << targetChip->ChipID << ", " << dieBKE->ActiveTransactions.front()->Address.DieID << ": READ_CMD_ADDR_TRANSFERRED ")				
 				targetChip->EndCMDXfer(dieBKE->ActiveCommand);
 				for (auto tr : dieBKE->ActiveTransactions) {
 					tr->STAT_execution_time = dieBKE->Expected_finish_time - Simulator->Time();
@@ -464,7 +464,7 @@ namespace SSD_Components {
 	#if 0
 				if (tr->ExecutionMode != ExecutionModeType::COPYBACK)
 	#endif
-				broadcastTransactionServicedSignal(dieBKE->ActiveTransfer);
+				broadcastTransactionServicedSignal(dieBKE->ActiveTransfer); //handle_ready_signal_from_chip()에서 read는 따로 처리하지 않았고, 여기서 처리함
 
 				for (std::list<NVM_Transaction_Flash*>::iterator it = dieBKE->ActiveTransactions.begin();
 					it != dieBKE->ActiveTransactions.end(); it++) {
@@ -574,7 +574,7 @@ namespace SSD_Components {
 			{
 				chipBKE->WaitingReadTXCount++;
 				if (_my_instance->channels[chip->ChannelID]->GetStatus() == BusChannelStatus::IDLE)
-					_my_instance->transfer_read_data_from_chip(chipBKE, dieBKE, (*it));
+					_my_instance->transfer_read_data_from_chip(chipBKE, dieBKE, (*it)); //READ_DATA_TRANSFERRED로 이벤트 등록 => broadcastTransactionServicedSignal()호출
 				else
 				{
 					switch (dieBKE->ActiveTransactions.front()->Source)
@@ -644,6 +644,8 @@ namespace SSD_Components {
 		{
 			DEBUG("Chip " << chip->ChannelID << ", " << chip->ChipID << ": finished program command")
 			int i = 0;
+			//if(dieBKE->ActiveTransactions.empty())
+			//	PRINT_ERROR("Die book keeping entry, active trasaction list is null")
 			for (std::list<NVM_Transaction_Flash*>::iterator it = dieBKE->ActiveTransactions.begin();
 				it != dieBKE->ActiveTransactions.end(); it++, i++)
 			{
@@ -665,6 +667,8 @@ namespace SSD_Components {
 		case CMD_ERASE_BLOCK:
 		case CMD_ERASE_BLOCK_MULTIPLANE:
 			DEBUG("Chip " << chip->ChannelID << ", " << chip->ChipID << ": finished erase command")
+			//if(dieBKE->ActiveTransactions.empty())
+			//	PRINT_ERROR("Die book keeping entry, active trasaction list is null")
 			for (std::list<NVM_Transaction_Flash*>::iterator it = dieBKE->ActiveTransactions.begin();
 				it != dieBKE->ActiveTransactions.end(); it++)
 				_my_instance->broadcastTransactionServicedSignal(*it);
@@ -685,7 +689,7 @@ namespace SSD_Components {
 
 		if (_my_instance->channels[chip->ChannelID]->GetStatus() == BusChannelStatus::IDLE)
 			_my_instance->broadcastChannelIdleSignal(chip->ChannelID);
-		else if (chipBKE->Status == ChipStatus::IDLE)
+		else if (chipBKE->Status == ChipStatus::IDLE) 
 			_my_instance->broadcastChipIdleSignal(chip);
 	}
 

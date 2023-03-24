@@ -490,7 +490,7 @@ namespace SSD_Components
 				//iterator should be post-incremented since the iterator may be deleted from list
 				manage_user_transaction_facing_barrier((NVM_Transaction_Flash*)*(it++));
 			} else {
-				query_cmt((NVM_Transaction_Flash*)(*it++));
+				query_cmt((NVM_Transaction_Flash*)(*it++)); //transaction별 개별 피지컬 페이지 주소 할당
 			}
 		}
 
@@ -498,8 +498,8 @@ namespace SSD_Components
 		if (transactionList.size() > 0) {
 			ftl->TSU->Prepare_for_transaction_submit();
 			for (std::list<NVM_Transaction*>::const_iterator it = transactionList.begin();
-				it != transactionList.end(); it++) {
-				if (((NVM_Transaction_Flash*)(*it))->Physical_address_determined) {
+				it != transactionList.end(); it++) {			
+				if (((NVM_Transaction_Flash*)(*it))->Physical_address_determined) {					
 					ftl->TSU->Submit_transaction(static_cast<NVM_Transaction_Flash*>(*it)); //NVM_Transaction_Flash에는 Physical Address 멤버변수가 존재
 					if (((NVM_Transaction_Flash*)(*it))->Type == Transaction_Type::WRITE) {
 						if (((NVM_Transaction_Flash_WR*)(*it))->RelatedRead != NULL) {
