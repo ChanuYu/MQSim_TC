@@ -37,7 +37,7 @@ namespace SSD_Components
 				addr.DieID = die_id; addr.PlaneID = plane_id;
 				//수정 - 23.03.23 SLC영역/TLC영역 둘 중 하나라도 pool size가 threshold 미만이면 수행
 				if (block_manager->Get_pool_size(addr,true) < block_pool_gc_hard_threshold_slc
-					|| block_manager->Get_pool_size(addr,false) < block_pool_gc_hard_threshold)
+				||block_manager->Get_pool_size(addr,false) < block_pool_gc_hard_threshold)
 					return true;
 			}
 		}
@@ -46,11 +46,9 @@ namespace SSD_Components
 	}
 
 	/**
-	 * 프리블록 풀 사이즈가 gc 역치보다 작은 경우 invalid page가 가장 많은 victim block을 선정하여
-	 * erase transaction을 발행 및 Scheduling() 호출
-	 * 
+	 * victim block을 선정하여 erase transaction을 발행 및 Scheduling() 호출
 	 * 수정계획 - SLC 영역에서 호출되었으면 slc_pool에 존재하는 블록 중에서 victim block을 선정하도록 변경
-	 * 현재상황 - RGA 방식(기본값)만 SLC 영역 반영
+	 * 현재상황 - RGA 방식만 SLC 영역 반영
 	 * 
 	 * free_block_pool_size는 Get_free_block_pool_size(bool isSLC)가 들어옴
 	*/
@@ -157,6 +155,7 @@ namespace SSD_Components
 
 			//This should never happen, but we check it here for safty
 			if (pbke->Ongoing_erase_operations.find(gc_candidate_block_id) != pbke->Ongoing_erase_operations.end()) {
+				PRINT_ERROR("GC operation has already operated on the block")
 				return;
 			}
 			
@@ -170,12 +169,12 @@ namespace SSD_Components
 			}
 			
 			//Run the state machine to protect against race condition
-			block_manager->GC_WL_started(gc_candidate_address);
+			block_manager->GC_WL_started(gc_candidate_address); //plane_record->Blocks[block_address.BlockID].Has_ongoing_gc_wl = true;
 			pbke->Ongoing_erase_operations.insert(gc_candidate_block_id);
 			address_mapping_unit->Set_barrier_for_accessing_physical_block(gc_candidate_address);//Lock the block, so no user request can intervene while the GC is progressing
 			
 			//If there are ongoing requests targeting the candidate block, the gc execution should be postponed
-			if (block_manager->Can_execute_gc_wl(gc_candidate_address)) {
+			if (block_manager->Can_execute_gc_wl(gc_candidate_address)) { //해당 block에 ongoing user program count와 ongoing user read count가 0이어야 함
 				Stats::Total_gc_executions++;
 				tsu->Prepare_for_transaction_submit();
 

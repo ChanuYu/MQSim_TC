@@ -33,6 +33,9 @@ namespace SSD_Components
 		//수정 - 23.03.10
 		Block_Pool_Slot_Type **data_wf = isSLC ? &plane_record->Data_wf_slc[stream_id] : &plane_record->Data_wf[stream_id];
 
+		if((*data_wf)==NULL)
+			PRINT_ERROR("Abnormal access to data_wf block")
+
 		page_address.BlockID = (*data_wf)->BlockID;
 		page_address.PageID = (*data_wf)->Current_page_write_index++;
 
@@ -60,6 +63,9 @@ namespace SSD_Components
 
 		//수정 - 23.03.15
 		Block_Pool_Slot_Type **gc_wf = isSLC ? &plane_record->GC_wf_slc[stream_id] : &plane_record->GC_wf[stream_id];
+
+		if((*gc_wf)==NULL)
+			PRINT_ERROR("Abnormal access to gc_wf block")
 
 		page_address.BlockID = (*gc_wf)->BlockID;
 		page_address.PageID = (*gc_wf)->Current_page_write_index++;
@@ -161,6 +167,7 @@ namespace SSD_Components
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID];
 		Block_Pool_Slot_Type* block = &(plane_record->Blocks[block_address.BlockID]);
+		bool is_slc_block = block->isSLC;
 		plane_record->Free_pages_count += block->Invalid_page_count;
 		plane_record->Invalid_pages_count -= block->Invalid_page_count;
 
@@ -168,6 +175,11 @@ namespace SSD_Components
 		block->Erase();
 		Stats::Block_erase_histogram[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID][block->Erase_count]++;
 		plane_record->Add_to_free_block_pool(block, gc_and_wl_unit->Use_dynamic_wearleveling());
+
+		//slc 블록을 지운 경우 새로 slc 블록 추가
+		if(is_slc_block)
+			transformToSLCBlocks(plane_record, gc_and_wl_unit->Use_dynamic_wearleveling());
+
 		plane_record->Check_bookkeeping_correctness(block_address);
 	}
 

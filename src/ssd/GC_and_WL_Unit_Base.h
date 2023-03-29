@@ -81,7 +81,10 @@ namespace SSD_Components
 		bool preemptible_gc_enabled;
 		double gc_hard_threshold;
 		unsigned int block_pool_gc_hard_threshold;
-		unsigned int max_ongoing_gc_reqs_per_plane;//This value has two important usages: 1) maximum number of concurrent gc operations per plane, and 2) the value that determines urgent GC execution when there is a shortage of flash blocks. If the block bool size drops below this value, all incomming user writes should be blocked
+
+		//This value has two important usages: 1) maximum number of concurrent gc operations per plane, and 
+		//2) the value that determines urgent GC execution when there is a shortage of flash blocks. If the block bool size drops below this value, all incomming user writes should be blocked
+		unsigned int max_ongoing_gc_reqs_per_plane; //기본값 10
 
 		//Following variabels are used based on the type of GC block selection policy
 		unsigned int rga_set_size;//The number of random flash blocks that are radnomly selected 

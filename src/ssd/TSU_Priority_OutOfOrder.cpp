@@ -302,6 +302,7 @@ void TSU_Priority_OutOfOrder::Schedule()
     }
 }
 
+//UserReadQueue에서 priority에 따른 유저 리드 리퀘스트를 반환
 Flash_Transaction_Queue *TSU_Priority_OutOfOrder::get_next_read_service_queue(NVM::FlashMemory::Flash_Chip *chip)
 {
     if (UserReadTRQueue[chip->ChannelID][chip->ChipID][IO_Flow_Priority_Class::URGENT].size() > 0)
@@ -336,6 +337,7 @@ Flash_Transaction_Queue *TSU_Priority_OutOfOrder::get_next_read_service_queue(NV
     return NULL;
 }
 
+//sourceQueue1과 sourceQueue2 내용 결정 및 issue_command_to_chip() 호출
 bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_Chip *chip)
 {
     Flash_Transaction_Queue *sourceQueue1 = NULL, *sourceQueue2 = NULL;

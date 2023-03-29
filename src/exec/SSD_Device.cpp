@@ -140,7 +140,7 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		//slc table 생성 - 23.03.07
 		LPA_type total_capacity = parameters->Flash_Channel_Count * parameters->Chip_No_Per_Channel * parameters->Flash_Parameters.Die_No_Per_Chip * parameters->Flash_Parameters.Plane_No_Per_Die *
 								  parameters->Flash_Parameters.Block_No_Per_Plane * parameters->Flash_Parameters.Page_No_Per_Block;
-		_slc_table = new SSD_Components::SLC_Table(total_capacity);
+		_slc_table = new SSD_Components::SLC_Table((unsigned int)io_flows->size(),total_capacity);
 		ftl->slc_table = _slc_table;
 
 		//Step 5: create TSU

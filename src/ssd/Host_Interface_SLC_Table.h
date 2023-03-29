@@ -19,14 +19,15 @@ namespace SSD_Components
     class SLC_Table
     {
     public:
-        SLC_Table(LPA_type total_capacity);
+        SLC_Table(unsigned int total_stream, LPA_type capacity_per_stream);
         ~SLC_Table();
 
-        bool *map_table; //multi stream이 아닌 단일 스트림을 가정
-        bool isLPAEntrySLC(const LPA_type &lpa);
-        void changeEntryModeTo(const LPA_type &lpa,Flash_Technology_Type type);
+        bool isLPAEntrySLC(stream_id_type stream_id, const LPA_type &lpa);
+        void changeEntryModeTo(stream_id_type stream_id, const LPA_type &lpa,Flash_Technology_Type type);
     private:
         LPA_type total_capacity_in_page_unit;
+        unsigned int total_stream;
+        bool **map_table;
     };
 }
 

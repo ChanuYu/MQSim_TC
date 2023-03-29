@@ -205,15 +205,9 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		}
 		LPA_type lpa = internal_lsa / host_interface->sectors_per_page;
 		
-		/**
-		 * 23.03.07 slc map table 동작 확인
-		if(lpa==0)
-			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
-		*/
 		if(lpa%8==0)
-			(*p_table)->changeEntryModeTo(lpa,Flash_Technology_Type::SLC);
-			
-		bool isSLCTrx = (*p_table)->isLPAEntrySLC(lpa);
+			(*p_table)->changeEntryModeTo(user_request->Stream_id,lpa,Flash_Technology_Type::SLC);
+		bool isSLCTrx = (*p_table)->isLPAEntrySLC(user_request->Stream_id,lpa);
 
 		page_status_type temp = ~(0xffffffffffffffff << (int)transaction_size);
 		//NVM_Transaction_Flash_WR::page_status_type write_sectors_bitmap

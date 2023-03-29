@@ -318,6 +318,8 @@ namespace SSD_Components
 			}
 		}
 
+		write_trx_for_overfull_plane = Write_transactions_for_overfull_planes;
+
 		flash_channel_ID_type* channel_ids = NULL;
 		flash_channel_ID_type* chip_ids = NULL;
 		flash_channel_ID_type* die_ids = NULL;
@@ -585,6 +587,52 @@ namespace SSD_Components
 		}
 	}
 
+	bool Address_Mapping_Unit_Page_Level::checkFreeSLCArea(const NVM::FlashMemory::Physical_Page_Address &plane_address, stream_id_type stream_id)
+	{
+		PlaneBookKeepingType *pbke = block_manager->Get_plane_bookkeeping_entry(plane_address);
+		Block_Pool_Slot_Type *cur_block = pbke->Data_wf_slc[stream_id];
+
+		if(cur_block == NULL)
+			return false;
+		
+		return true;
+	}
+
+	bool Address_Mapping_Unit_Page_Level::checkAndAllocateNewPhysicalAddress(NVM_Transaction_Flash* transaction)
+	{
+		NVM::FlashMemory::Physical_Page_Address tmp_plane_address = transaction->Address;
+		PlaneBookKeepingType *pbke = NULL;
+
+		unsigned int channel = tmp_plane_address.ChannelID;
+		unsigned int chip = tmp_plane_address.ChipID;
+		unsigned int die = tmp_plane_address.DieID;  //하와와 유짱의 변수인것이에와요~~~~~~ pull request
+		unsigned int plane = tmp_plane_address.PlaneID;
+
+		for(unsigned int chanCnt=0;chanCnt<channel_count;chanCnt++) {
+			tmp_plane_address.ChannelID = channel;
+			for(unsigned int chipCnt=0;chipCnt<chip_no_per_channel;chipCnt++) {
+				tmp_plane_address.ChipID = chip;
+				for(unsigned int dieCnt=0;dieCnt<die_no_per_chip;dieCnt++) {
+					tmp_plane_address.DieID = die;
+					for(unsigned int planeCnt=0;planeCnt<plane_no_per_die;planeCnt++) {
+						tmp_plane_address.PlaneID = plane;
+						if(checkFreeSLCArea(tmp_plane_address,transaction->Stream_id))
+						{
+							transaction->Address = tmp_plane_address;
+							return true;
+						}
+						plane = (++plane) % plane_no_per_die;
+					}
+					die = (++die) % die_no_per_chip;
+				}
+				chip = (++chip) % chip_no_per_channel;
+			}
+			channel = (++channel) % channel_count;
+		}
+
+		return false;
+	}
+
 	/*This function should be invoked only if the address translation entry exists in CMT.
 	* Otherwise, the call to the CMT->Rerieve_ppa, within this function, will throw an exception.
 	*/
@@ -605,9 +653,19 @@ namespace SSD_Components
 			return true;
 		} else {//This is a write transaction
 			allocate_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction); //plane 위치까지 결정
+
+			//slc free block pool에 여유 공간이 있는지 확인, 없으면 새로운 physical address 부여, ssd 전체에 존재하지 않으면 tlc로 전환
+			if(transaction->isSLCTrx) {
+				if(!checkAndAllocateNewPhysicalAddress(transaction)) {
+					transaction->isSLCTrx = false;
+					//slc_table->changeEntryModeTo(transaction->Stream_id,transaction->LPA,Flash_Technology_Type::TLC);
+					//std::cout<<"compare: "<<(slc_table->isLPAEntrySLC(transaction->Stream_id,transaction->LPA)==true)<<std::endl;
+				}
+			}
 			
 			//there are too few free pages remaining only for GC
-			if (ftl->GC_and_WL_Unit->Stop_servicing_writes(transaction->Address,transaction->isSLCTrx)){
+			if (ftl->GC_and_WL_Unit->Stop_servicing_writes(transaction->Address,false)){ //slc에 여유공간이 없으면 tlc로 전환하므로 여기서는 is_slc = false로 전달
+				std::cout<<"stop servicing writes"<<std::endl;
 				return false;
 			}
 			allocate_page_in_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction, false);
@@ -1196,14 +1254,22 @@ namespace SSD_Components
 			}
 		}
 
-		bool isSLC = slc_table->isLPAEntrySLC(transaction->LPA);
+		/* 23.03.29 -> 다른 모듈의 slc table의 값과 연동이 잘 안 됨 => transaction->isSLCTrx로 판단해야 함
+		bool isSLC = slc_table->isLPAEntrySLC(transaction->Stream_id,transaction->LPA);
+		if(isSLC != transaction->isSLCTrx)
+		{
+			std::cout<<"isSLC: "<<isSLC<<", transaction->isSLCTrx: "<<transaction->isSLCTrx<<std::endl; 
+			PRINT_ERROR("not matching slc table entry")
+		}
+		*/
+			
 		/*The following lines should not be ordered with respect to the block_manager->Invalidate_page_in_block
 		* function call in the above code blocks. Otherwise, GC may be invoked (due to the call to Allocate_block_....) and
 		* may decide to move a page that is just invalidated.*/
 		if (is_for_gc) {
-			block_manager->Allocate_block_and_page_in_plane_for_gc_write(transaction->Stream_id, transaction->Address, isSLC);
+			block_manager->Allocate_block_and_page_in_plane_for_gc_write(transaction->Stream_id, transaction->Address, transaction->isSLCTrx);
 		} else {
-			block_manager->Allocate_block_and_page_in_plane_for_user_write(transaction->Stream_id, transaction->Address, isSLC);
+			block_manager->Allocate_block_and_page_in_plane_for_user_write(transaction->Stream_id, transaction->Address, transaction->isSLCTrx);
 		}
 		transaction->PPA = Convert_address_to_ppa(transaction->Address);
 		domain->Update_mapping_info(ideal_mapping_table, transaction->Stream_id, transaction->LPA, transaction->PPA,

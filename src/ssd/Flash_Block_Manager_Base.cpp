@@ -140,12 +140,15 @@ namespace SSD_Components
 		Block_Pool_Slot_Type* new_block = NULL;
 		
 		//SLC 영역 내에서의 GC가 구현될 때까지 보류
-		//std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = for_slc ? free_slc_blocks : Free_block_pool;
-		std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = Free_block_pool;
-		new_block = (*free_block_pool.begin()).second;//Assign a new write frontier block
+		std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = for_slc ? free_slc_blocks : Free_block_pool;
+		//std::multimap<unsigned int, Block_Pool_Slot_Type*> &free_block_pool = Free_block_pool;
 		if (free_block_pool.size() == 0) {
-			PRINT_ERROR("Requesting a free block from an empty pool!")
+			if(for_slc)
+				return NULL;
+			else
+				PRINT_ERROR("Requesting a free block from an empty pool!")
 		}
+		new_block = (*free_block_pool.begin()).second;//Assign a new write frontier block
 		free_block_pool.erase(free_block_pool.begin());
 		new_block->Stream_id = stream_id;
 		new_block->Holds_mapping_data = for_mapping_data;
@@ -157,7 +160,7 @@ namespace SSD_Components
 	//Free_block_pool <---> free_slc_block 전용 인터페이스 (Free block에서만 호출되어야 함)
 	//slc ---> tlc인 경우에도 free_slc_blocks에 있는 블록들을 대상으로 Free_block_pool로 이동
 	//free_slc_block에 잔여블록이 부족한 경우 transformToTLC()에서 migration함수를 호출한 후에 다시 시도해야 함
-	//isSLC, Last_page_index, Invalid_page_count, bitmap 조정
+	//Block의 isSLC, Last_page_index, Invalid_page_count, bitmap 조정
 	void Block_Pool_Slot_Type::changeFlashMode(bool toSLC)
 	{
 		isSLC = toSLC;
@@ -351,6 +354,7 @@ namespace SSD_Components
 		return plane_record->Blocks[block_address.BlockID].Has_ongoing_gc_wl;
 	}
 	
+	//해당 블록의 진행 중인 유저 프로그램 명령과 리드 명령이 없으면 true
 	bool Flash_Block_Manager_Base::Can_execute_gc_wl(const NVM::FlashMemory::Physical_Page_Address& block_address)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID];
