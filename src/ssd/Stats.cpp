@@ -41,7 +41,7 @@ namespace SSD_Components
 
 	//수정 - 23.03.08
 	unsigned int Stats::issuedTrx = 0;
-
+	unsigned int Stats::Total_slc_area_gc_executions = 0;
 
 	void Stats::Init_stats(unsigned int channel_no, unsigned int chip_no_per_channel, unsigned int die_no_per_chip, unsigned int plane_no_per_die, 
 		unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int max_allowed_block_erase_count)
@@ -75,6 +75,7 @@ namespace SSD_Components
 
 		Total_gc_executions = 0;  Total_page_movements_for_gc = 0;
 		Total_wl_executions = 0;  Total_page_movements_for_wl = 0;
+		Total_slc_area_gc_executions = 0;
 
 		for (stream_id_type stream_id = 0; stream_id < MAX_SUPPORT_STREAMS; stream_id++) {
 			Total_flash_reads_for_mapping_per_stream[stream_id] = 0;

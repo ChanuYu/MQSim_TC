@@ -27,7 +27,6 @@ namespace SSD_Components
 		if (!preemptible_gc_enabled) {
 			return true;
 		}
-
 		unsigned int block_pool_gc_hard_threshold_slc = (unsigned int)(gc_hard_threshold * (double)block_manager->getCurrSLCBlocksPerPlane());
 
 		NVM::FlashMemory::Physical_Page_Address addr;
@@ -54,11 +53,11 @@ namespace SSD_Components
 	*/
 	void GC_and_WL_Unit_Page_Level::Check_gc_required(const unsigned int free_block_pool_size, const NVM::FlashMemory::Physical_Page_Address& plane_address, bool is_slc)
 	{
-		unsigned int block_gc_threshold = is_slc ? (unsigned int)(gc_threshold * (double)block_manager->getCurrSLCBlocksPerPlane()) : block_pool_gc_threshold;
+		PlaneBookKeepingType* pbke = block_manager->Get_plane_bookkeeping_entry(plane_address);
+		unsigned int block_gc_threshold = is_slc ? (unsigned int)(gc_threshold * (double)pbke->slc_blocks.size()) : block_pool_gc_threshold;
 		if (free_block_pool_size < block_gc_threshold) {
 			//RGA 방식이기에 여기서 쓰이는 Get_coldest_block_id()는 의미가 없음
 			flash_block_ID_type gc_candidate_block_id = block_manager->Get_coldest_block_id(plane_address);
-			PlaneBookKeepingType* pbke = block_manager->Get_plane_bookkeeping_entry(plane_address);
 
 			if (pbke->Ongoing_erase_operations.size() >= max_ongoing_gc_reqs_per_plane) {
 				return;
@@ -177,6 +176,9 @@ namespace SSD_Components
 			if (block_manager->Can_execute_gc_wl(gc_candidate_address)) { //해당 block에 ongoing user program count와 ongoing user read count가 0이어야 함
 				Stats::Total_gc_executions++;
 				tsu->Prepare_for_transaction_submit();
+
+				if(is_slc)
+					Stats::Total_slc_area_gc_executions++;					
 
 				NVM_Transaction_Flash_ER* gc_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, pbke->Blocks[gc_candidate_block_id].Stream_id, gc_candidate_address);
 				//If there are some valid pages in block, then prepare flash transactions for page movement

@@ -37,6 +37,7 @@ namespace SSD_Components
 		static unsigned int***** Block_erase_histogram;
 
 		static unsigned int issuedTrx;
+		static unsigned int Total_slc_area_gc_executions;
 	};
 }
 

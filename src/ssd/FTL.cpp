@@ -877,6 +877,10 @@ namespace SSD_Components
 		val = std::to_string(double(Stats::Total_page_movements_for_gc) / double(Stats::Total_gc_executions));
 		xmlwriter.Write_attribute_string_inline(attr, val);
 
+		attr = "Total_SLC_Area_GC_Executions";
+		val = std::to_string(Stats::Total_slc_area_gc_executions);
+		xmlwriter.Write_attribute_string_inline(attr, val);
+
 		attr = "Total_WL_Executions";
 		val = std::to_string(Stats::Total_wl_executions);
 		xmlwriter.Write_attribute_string_inline(attr, val);

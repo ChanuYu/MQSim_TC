@@ -178,6 +178,8 @@ namespace SSD_Components
 		bool checkFreeSLCArea(const NVM::FlashMemory::Physical_Page_Address &plane_address, stream_id_type stream_id);
 		bool checkAndAllocateNewPhysicalAddress(NVM_Transaction_Flash*);
 
+		void adjustHotDataLRU(NVM_Transaction_Flash*);
+
 		SLC_Table *slc_table;
 
 	private:

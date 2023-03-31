@@ -39,7 +39,7 @@ namespace SSD_Components
 			bool ideal_mapping_table, unsigned int no_of_input_streams,
 			unsigned int ChannelCount, unsigned int chip_no_per_channel, unsigned int DieNoPerChip, unsigned int PlaneNoPerDie,
 			unsigned int Block_no_per_plane, unsigned int Page_no_per_block, unsigned int SectorsPerPage, unsigned int PageSizeInBytes,
-			double Overprovisioning_ratio, CMT_Sharing_Mode sharing_mode = CMT_Sharing_Mode::SHARED, bool fold_large_addresses = true);
+			double Overprovisioning_ratio, CMT_Sharing_Mode sharing_mode = CMT_Sharing_Mode::SHARED, bool fold_large_addresses = true, unsigned int lru_size_limit = 100000);
 		virtual ~Address_Mapping_Unit_Base();
 
 		//Functions used for preconditioning
@@ -80,6 +80,9 @@ namespace SSD_Components
 		virtual void Remove_barrier_for_accessing_mvpn(const stream_id_type stream_id, const MVPN_type mvpn) = 0; //Removes the barrier that has already been set for accessing an MVPN (i.e., the GC_and_WL_Unit_Base unit successfully finished relocating MVPN from one physical location to another physical location).
 		virtual void Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address) = 0;//This function is invoked when GC execution is finished on a plane and the plane has enough number of free pages to service writes
 	
+		std::list<std::pair<bool,LPA_type>> hot_data_lru_active;
+		std::list<std::pair<bool,LPA_type>> hot_data_lru_inactive;
+		unsigned int lru_size_limit;
 		std::set<NVM_Transaction_Flash_WR*>**** write_trx_for_overfull_plane;
 	protected:
 		FTL* ftl;

@@ -9,6 +9,7 @@
 #include "TSU_Base.h"
 #include "NVM_PHY_ONFI.h"
 
+#include "Tiering_Area_Controller_Base.h"
 
 namespace SSD_Components
 {

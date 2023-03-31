@@ -70,6 +70,9 @@ namespace SSD_Components
 						_my_instance->tsu->Prepare_for_transaction_submit();
 						NVM_Transaction_Flash_ER* gc_wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, block->Stream_id, gc_wl_candidate_address);
 						
+						if(transaction->isSLCTrx)
+							Stats::Total_slc_area_gc_executions++;						
+						
 						//If there are some valid pages in block, then prepare flash transactions for page movement
 						if (block->Current_page_write_index - block->Invalid_page_count > 0) {
 							//address_mapping_unit->Lock_physical_block_for_gc(gc_candidate_address);//Lock the block, so no user request can intervene while the GC is progressing
@@ -104,12 +107,12 @@ namespace SSD_Components
 						_my_instance->tsu->Schedule();
 					}
 				}
-				else if(transaction->isSLCTrx) { //조기에 SLC 영역의 공간이 다 차는 경우 SLC 영역의 GC 수행		
-					unsigned int block_gc_threshold = (unsigned int)(_my_instance->gc_threshold * (double)_my_instance->block_manager->getCurrSLCBlocksPerPlane());
+				else if(transaction->isSLCTrx) { //조기에 SLC 영역의 공간이 다 차는 경우 SLC 영역의 GC 수행
+					PlaneBookKeepingType *pbke = _my_instance->block_manager->Get_plane_bookkeeping_entry(transaction->Address);
+					unsigned int block_gc_threshold = (unsigned int)(_my_instance->gc_threshold * (double)pbke->slc_blocks.size());
 					if(_my_instance->block_manager->Get_pool_size(transaction->Address,transaction->isSLCTrx) < block_gc_threshold) {
 						flash_block_ID_type gc_candidate_block_id;
-						PlaneBookKeepingType *pbke = _my_instance->block_manager->Get_plane_bookkeeping_entry(transaction->Address);
-
+						
 						if (pbke->Ongoing_erase_operations.size() >= _my_instance->max_ongoing_gc_reqs_per_plane)
 							return;
 
@@ -158,6 +161,7 @@ namespace SSD_Components
 						//If there are ongoing requests targeting the candidate block, the gc execution should be postponed
 						if (_my_instance->block_manager->Can_execute_gc_wl(gc_candidate_address)) { //해당 block에 ongoing user program count와 ongoing user read count가 0이어야 함
 							Stats::Total_gc_executions++;
+							Stats::Total_slc_area_gc_executions++;
 							_my_instance->tsu->Prepare_for_transaction_submit();
 
 							NVM_Transaction_Flash_ER* gc_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, pbke->Blocks[gc_candidate_block_id].Stream_id, gc_candidate_address);
@@ -259,6 +263,7 @@ namespace SSD_Components
 				_my_instance->address_mapping_unit->Start_servicing_writes_for_overfull_plane(transaction->Address);//Must be inovked after above statements since it may lead to flash page consumption for waiting program transactions
 
 				if (_my_instance->Stop_servicing_writes(transaction->Address,transaction->isSLCTrx)) {
+					std::cout<<"stop servicing writes"<<std::endl;
 					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(transaction->isSLCTrx), transaction->Address);
 				}
 				break;

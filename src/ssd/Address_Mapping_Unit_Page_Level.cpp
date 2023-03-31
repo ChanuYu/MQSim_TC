@@ -633,6 +633,50 @@ namespace SSD_Components
 		return false;
 	}
 
+	//trnsaction->LPA는 stream_id 내부의 lpa를 나타내지만, 실험환경에서는 multi-stream을 사용하지 않을 거라 LPA값만을 통해서 비교
+	void Address_Mapping_Unit_Page_Level::adjustHotDataLRU(NVM_Transaction_Flash* transaction)
+	{
+		bool exists = false;
+		std::list<std::pair<bool,LPA_type>>::iterator iter;
+		for(iter=hot_data_lru_active.begin();iter!=hot_data_lru_active.end();iter++){
+			if((*iter).second==transaction->LPA){
+				exists = true;
+				break;
+			}
+		}
+		if(exists){
+			std::pair<bool,LPA_type> tmp(iter->first,iter->second);
+			hot_data_lru_active.erase(iter);
+			hot_data_lru_active.push_front(tmp);
+		}
+		else {
+			for(iter=hot_data_lru_inactive.begin();iter!=hot_data_lru_inactive.end();iter++){
+				if((*iter).second==transaction->LPA){
+					exists = true;
+					break;
+				}
+			}
+			if(exists){ //active list tail의 데이터를 inactive list head로 이동
+				std::pair<bool,LPA_type> tmp(iter->first,iter->second);
+				hot_data_lru_inactive.erase(iter);
+				hot_data_lru_active.push_front(tmp);
+
+				if(!(hot_data_lru_active.size()<lru_size_limit)){
+					iter = (hot_data_lru_active.end())--;
+					tmp = (*iter);
+					hot_data_lru_inactive.push_front(tmp);
+				}
+			}
+			else {  //아예 존재하지 않는 경우 inactive list의 head에 삽입
+				hot_data_lru_inactive.push_front({false,transaction->LPA});
+				if(!(hot_data_lru_inactive.size()<lru_size_limit)) {
+					iter = (hot_data_lru_inactive.end())--;
+					hot_data_lru_inactive.erase(iter);
+				}
+			}
+		}
+	}
+
 	/*This function should be invoked only if the address translation entry exists in CMT.
 	* Otherwise, the call to the CMT->Rerieve_ppa, within this function, will throw an exception.
 	*/
@@ -649,8 +693,6 @@ namespace SSD_Components
 			Convert_ppa_to_address(transaction->PPA, transaction->Address);
 			block_manager->Read_transaction_issued(transaction->Address);
 			transaction->Physical_address_determined = true;
-			
-			return true;
 		} else {//This is a write transaction
 			allocate_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction); //plane 위치까지 결정
 
@@ -670,9 +712,12 @@ namespace SSD_Components
 			}
 			allocate_page_in_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction, false);
 			transaction->Physical_address_determined = true;
-			
-			return true;
 		}
+
+		//접근이 발생하였으므로 해당 LPA에 대한 LRU 조정
+		adjustHotDataLRU(transaction);
+		
+		return true;
 	}
 	
 	void Address_Mapping_Unit_Page_Level::Allocate_address_for_preconditioning(const stream_id_type stream_id, std::map<LPA_type, page_status_type>& lpa_list, std::vector<double>& steady_state_distribution)
