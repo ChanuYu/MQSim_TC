@@ -50,6 +50,7 @@ namespace SSD_Components
 			case Transaction_Source_Type::USERIO:
 			case Transaction_Source_Type::MAPPING:
 			case Transaction_Source_Type::CACHE:
+			case Transaction_Source_Type::Migration:
 				switch (transaction->Type)
 				{
 					case Transaction_Type::READ:

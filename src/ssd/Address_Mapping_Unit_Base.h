@@ -10,10 +10,13 @@
 #include "FTL.h"
 #include "Flash_Block_Manager_Base.h"
 
+#include "Tiering_Area_Controller_Base.h"
+
 namespace SSD_Components
 {
 	class FTL;
 	class Flash_Block_Manager_Base;
+	class Tiering_Area_Controller_Base;
 
 	typedef uint32_t MVPN_type;
 	typedef uint32_t MPPN_type;
@@ -80,6 +83,8 @@ namespace SSD_Components
 		virtual void Remove_barrier_for_accessing_mvpn(const stream_id_type stream_id, const MVPN_type mvpn) = 0; //Removes the barrier that has already been set for accessing an MVPN (i.e., the GC_and_WL_Unit_Base unit successfully finished relocating MVPN from one physical location to another physical location).
 		virtual void Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address) = 0;//This function is invoked when GC execution is finished on a plane and the plane has enough number of free pages to service writes
 	
+		virtual void returnVictimPages(std::vector<LPA_type> &v, unsigned int num_pages) = 0;
+		
 		std::list<std::pair<bool,LPA_type>> hot_data_lru_active;
 		std::list<std::pair<bool,LPA_type>> hot_data_lru_inactive;
 		unsigned int lru_size_limit;

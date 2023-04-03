@@ -485,9 +485,17 @@ namespace SSD_Components
 	//Data Cache Manager => AMU => TSU (트랜잭션 리스트의 이동경로)
 	void Address_Mapping_Unit_Page_Level::Translate_lpa_to_ppa_and_dispatch(const std::list<NVM_Transaction*>& transactionList)
 	{
+		LPA_type prev_LPA = NO_LPA;
 		//translate lpa to ppa
 		for (std::list<NVM_Transaction*>::const_iterator it = transactionList.begin();
 			it != transactionList.end(); ) {
+			
+			//hotdata lru 업데이트
+			if(prev_LPA != ((NVM_Transaction_Flash*)(*it))->LPA) {
+				prev_LPA = ((NVM_Transaction_Flash*)(*it))->LPA;
+				adjustHotDataLRU((NVM_Transaction_Flash*)(*it));
+			}
+
 			if (is_lpa_locked_for_gc((*it)->Stream_id, ((NVM_Transaction_Flash*)(*it))->LPA)) {
 				//iterator should be post-incremented since the iterator may be deleted from list
 				manage_user_transaction_facing_barrier((NVM_Transaction_Flash*)*(it++));
@@ -645,9 +653,13 @@ namespace SSD_Components
 			}
 		}
 		if(exists){
-			std::pair<bool,LPA_type> tmp(iter->first,iter->second);
+			//write trx의 경우 slc buffering으로 slc영역에 쓰인다면 바로 true값을 넣어줘야 함
+			if(transaction->Type==Transaction_Type::WRITE)
+				hot_data_lru_active.push_front({transaction->isSLCTrx,iter->second});
+			else 
+				hot_data_lru_active.push_front({iter->first,iter->second});
+
 			hot_data_lru_active.erase(iter);
-			hot_data_lru_active.push_front(tmp);
 		}
 		else {
 			for(iter=hot_data_lru_inactive.begin();iter!=hot_data_lru_inactive.end();iter++){
@@ -657,19 +669,25 @@ namespace SSD_Components
 				}
 			}
 			if(exists){ //active list tail의 데이터를 inactive list head로 이동
-				std::pair<bool,LPA_type> tmp(iter->first,iter->second);
+				if(transaction->Type==Transaction_Type::WRITE)
+					hot_data_lru_active.push_front({transaction->isSLCTrx,iter->second});
+				else
+					hot_data_lru_active.push_front({iter->first,iter->second});
+				
 				hot_data_lru_inactive.erase(iter);
-				hot_data_lru_active.push_front(tmp);
 
-				if(!(hot_data_lru_active.size()<lru_size_limit)){
+				if(hot_data_lru_active.size()>lru_size_limit){
 					iter = (hot_data_lru_active.end())--;
-					tmp = (*iter);
-					hot_data_lru_inactive.push_front(tmp);
+					hot_data_lru_inactive.push_front((*iter));
 				}
 			}
 			else {  //아예 존재하지 않는 경우 inactive list의 head에 삽입
-				hot_data_lru_inactive.push_front({false,transaction->LPA});
-				if(!(hot_data_lru_inactive.size()<lru_size_limit)) {
+				if(transaction->Type==Transaction_Type::WRITE)
+					hot_data_lru_inactive.push_front({transaction->isSLCTrx,transaction->LPA});
+				else //LRU에 존재하지 않던 데이터에 대하여 접근이 발생한 경우 SLC영역에 존재하는지 아닌지 아직은 정확히 판단할 수 없음 (수정 필요)
+					hot_data_lru_inactive.push_front({false,transaction->LPA});
+				
+				if(hot_data_lru_inactive.size()>lru_size_limit) {
 					iter = (hot_data_lru_inactive.end())--;
 					hot_data_lru_inactive.erase(iter);
 				}
@@ -710,12 +728,11 @@ namespace SSD_Components
 				std::cout<<"stop servicing writes"<<std::endl;
 				return false;
 			}
+
+			//여기서 ppa 정함
 			allocate_page_in_plane_for_user_write((NVM_Transaction_Flash_WR*)transaction, false);
 			transaction->Physical_address_determined = true;
 		}
-
-		//접근이 발생하였으므로 해당 LPA에 대한 LRU 조정
-		adjustHotDataLRU(transaction);
 		
 		return true;
 	}
@@ -2071,5 +2088,10 @@ namespace SSD_Components
 			}
 		}
 		ftl->TSU->Schedule();
+	}
+
+	void Address_Mapping_Unit_Page_Level::returnVictimPages(std::vector<LPA_type> &v, unsigned int num_pages)
+	{
+		
 	}
 }

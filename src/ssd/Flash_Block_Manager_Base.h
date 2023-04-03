@@ -10,11 +10,14 @@
 #include "GC_and_WL_Unit_Base.h"
 #include "../nvm_chip/flash_memory/FlashTypes.h"
 
+#include "Tiering_Area_Controller_Base.h"
+
 namespace SSD_Components
 {
 #define All_VALID_PAGE 0x0000000000000000ULL
 	class GC_and_WL_Unit_Base;
 	class Flash_Mode_Controller;
+	class Tiering_Area_Controller_Base;
 	/*
 	* Block_Service_Status is used to impelement a state machine for each physical block in order to
 	* eliminate race conditions between GC page movements and normal user I/O requests.
@@ -72,7 +75,7 @@ namespace SSD_Components
 		std::map<flash_block_ID_type,Block_Pool_Slot_Type*> slc_blocks; //slc모드로 programmed된 블록을 관리
 		std::multimap<unsigned int, Block_Pool_Slot_Type*> free_slc_blocks; //아직 program되지 않은 slc블록 관리
 		Block_Pool_Slot_Type** Data_wf_slc, **GC_wf_slc;
-		std::list<bool,flash_block_ID_type> slc_block_history; //각 플레인별 히스토리 기록 
+		std::list<flash_block_ID_type> slc_block_history; //각 플레인별 히스토리 기록 
 
 		//GC victim block 선정방식이 FIFO가 아니라면 신경 쓸 필요 x <- TLC Compression을 위해 고려해야 함 (SLC/TLC 구분해서 관리)
 		std::queue<flash_block_ID_type> Block_usage_history;//A fifo queue that keeps track of flash blocks based on their usage history

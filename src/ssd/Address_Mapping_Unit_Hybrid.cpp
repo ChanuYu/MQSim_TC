@@ -51,4 +51,5 @@ namespace SSD_Components
 	void Address_Mapping_Unit_Hybrid::manage_user_transaction_facing_barrier(NVM_Transaction_Flash* transaction) {}
 	void Address_Mapping_Unit_Hybrid::manage_mapping_transaction_facing_barrier(stream_id_type stream_id, MVPN_type mvpn, bool read) {}
 	void Address_Mapping_Unit_Hybrid::Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address) {}
+	void Address_Mapping_Unit_Hybrid::returnVictimPages(std::vector<LPA_type> &v, unsigned int num_pages) {}
 }

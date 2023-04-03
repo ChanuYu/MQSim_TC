@@ -179,6 +179,7 @@ namespace SSD_Components
 		bool checkAndAllocateNewPhysicalAddress(NVM_Transaction_Flash*);
 
 		void adjustHotDataLRU(NVM_Transaction_Flash*);
+		void returnVictimPages(std::vector<LPA_type> &v, unsigned int num_pages);
 
 		SLC_Table *slc_table;
 
