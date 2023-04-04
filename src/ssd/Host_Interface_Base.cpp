@@ -17,6 +17,18 @@ namespace SSD_Components
 		}
 	}
 
+	void Input_Stream_Manager_Base::ConnectToNoRequestSignal(NoRequestSignalHandlerType function)
+	{
+		connectedNoRequestSignalHandlers.push_back(function);
+	}
+
+	void Input_Stream_Manager_Base::broadcastNoRequestSignal()
+	{ 
+		for(std::vector<NoRequestSignalHandlerType>::iterator it = connectedNoRequestSignalHandlers.begin();
+		it != connectedNoRequestSignalHandlers.end();it++)
+			(*it)();
+	}
+
 	Input_Stream_Base::~Input_Stream_Base()
 	{
 	}

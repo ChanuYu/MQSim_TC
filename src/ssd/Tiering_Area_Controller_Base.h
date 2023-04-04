@@ -2,7 +2,7 @@
 #define TIERING_AREA_CONTROLLER_BASE_H
 
 #include "GC_and_WL_Unit_Base.h"
-#include "NVM_PHY_ONFI_NVDDR2.h"
+#include "Host_Interface_Base.h"
 
 namespace SSD_Components
 {
@@ -21,13 +21,13 @@ namespace SSD_Components
     class Tiering_Area_Controller_Base
     {
     public:
-        Tiering_Area_Controller_Base(GC_and_WL_Unit_Base *gc_wl, Address_Mapping_Unit_Base *amu, Flash_Block_Manager_Base *block_manager, TSU_Base *tsu, NVM_PHY_ONFI_NVDDR2* flash_controller, /*unsigned short *p_on_the_fly_requests,*/
-                                    unsigned int channel=2, unsigned int chip=2, unsigned int die=2, unsigned int plane=2, unsigned int block=1024, unsigned int page=256);
+        Tiering_Area_Controller_Base(GC_and_WL_Unit_Base *gc_wl, Address_Mapping_Unit_Base *amu, Flash_Block_Manager_Base *block_manager, TSU_Base *tsu, NVM_PHY_ONFI* flash_controller, Host_Interface_Base *hil,/*unsigned short *p_on_the_fly_requests,*/
+                                    unsigned int channel=4, unsigned int chip=2, unsigned int die=2, unsigned int plane=2, unsigned int block=1024, unsigned int page=256);
         virtual ~Tiering_Area_Controller_Base();
         //unsigned short getOnTheFlyRequests();
         unsigned int getIdealSLCAreaSize();
 
-        virtual void handleNoRequestSignal() = 0;
+        static void handleNoRequestSignal();
 
         virtual unsigned int getCurrentSLCAreaSize(PlaneBookKeepingType *pbke) = 0;
         virtual double getCurrentUtilization() = 0;
@@ -36,7 +36,7 @@ namespace SSD_Components
         virtual void broadcastIdealSLCAreaSize(PlaneBookKeepingType *pbke) = 0;
 
         virtual bool needToAdjustSLCArea() = 0;
-        virtual void adjustSLCArea(bool) = 0;
+        virtual void adjustSLCArea(unsigned int change_amount) = 0; //change_amount는 Byte단위임
         virtual void increaseSLCArea(unsigned int change_amount) = 0;
         virtual void decreaseSLCArea(unsigned int change_amount) = 0;
         
@@ -56,13 +56,16 @@ namespace SSD_Components
 
         //채널과 칩의 IDLE 상태를 기록 (NVM_PHY_ONFI_NVDDR2에서 broadcast)
         static void handle_chip_idle_signal(NVM::FlashMemory::Flash_Chip *chip);
+        static void handle_chip_idle_signal(flash_chip_ID_type chip);
         static void handle_channel_idle_signal(flash_channel_ID_type channel);
+        static void handle_transaction_serviced_signal(NVM_Transaction_Flash*);
 
         GC_and_WL_Unit_Base *gc_wl;
         Address_Mapping_Unit_Base* amu;
 		Flash_Block_Manager_Base* block_manager;
 		TSU_Base* tsu;
-        NVM_PHY_ONFI_NVDDR2* flash_controller;
+        NVM_PHY_ONFI* flash_controller;
+        Host_Interface_Base *hil;
 
         ChannelStatus_BI *channel_status;
         ChipStatus_BI *chip_status;

@@ -8,7 +8,7 @@ namespace SSD_Components
     class Tiering_Area_Controller : public Tiering_Area_Controller_Base
     {
     public:
-        Tiering_Area_Controller(GC_and_WL_Unit_Base *gc_wl, Address_Mapping_Unit_Base *amu, Flash_Block_Manager_Base *block_manager, TSU_Base *tsu, NVM_PHY_ONFI_NVDDR2* flash_controller, /*unsigned short *p_on_the_fly_requests,*/
+        Tiering_Area_Controller(GC_and_WL_Unit_Base *gc_wl, Address_Mapping_Unit_Base *amu, Flash_Block_Manager_Base *block_manager, TSU_Base *tsu, NVM_PHY_ONFI* flash_controller, Host_Interface_Base *hil,/*unsigned short *p_on_the_fly_requests,*/
                                     unsigned int channel, unsigned int chip, unsigned int die, unsigned int plane, unsigned int block, unsigned int page);
         ~Tiering_Area_Controller();
         void handleNoRequestSignal();
@@ -18,7 +18,7 @@ namespace SSD_Components
         void broadcastIdealSLCAreaSize(PlaneBookKeepingType *pbke);
 
         bool needToAdjustSLCArea();
-        void adjustSLCArea(bool);
+        void adjustSLCArea(unsigned int);
         void increaseSLCArea(unsigned int change_amount);
         void decreaseSLCArea(unsigned int change_amount);
         bool needToMigrate(PlaneBookKeepingType *pbke);

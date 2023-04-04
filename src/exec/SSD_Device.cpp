@@ -17,6 +17,8 @@
 #include "../ssd/NVM_PHY_ONFI_NVDDR2.h"
 #include "../utils/Logical_Address_Partitioning_Unit.h"
 
+#include "../ssd/Tiering_Area_Controller.h"
+
 /**
  * 수정계획
  * step1의 read/write latency를 flash mode에 따라 선택할 수 있도록 수정
@@ -402,7 +404,10 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		Simulator->AddObject(device->Host_interface);
 		dcm->Set_host_interface(device->Host_interface);
 
-		
+		SSD_Components::Tiering_Area_Controller_Base *tac = new SSD_Components::Tiering_Area_Controller(gcwl,amu,fbm,tsu,(SSD_Components::NVM_PHY_ONFI*)device->PHY,device->Host_interface, parameters->Flash_Channel_Count,parameters->Chip_No_Per_Channel,
+																parameters->Flash_Parameters.Die_No_Per_Chip,parameters->Flash_Parameters.Plane_No_Per_Die,parameters->Flash_Parameters.Block_No_Per_Plane,parameters->Flash_Parameters.Page_No_Per_Block);
+		ftl->tac = tac;
+
 		device->Host_interface->slc_table = _slc_table;
 		break;
 	}
@@ -429,6 +434,7 @@ SSD_Device::~SSD_Device()
 	delete ((SSD_Components::FTL *)this->Firmware)->GC_and_WL_Unit;
 	delete ((SSD_Components::FTL *)this->Firmware)->FMC;
 	delete ((SSD_Components::FTL *)this->Firmware)->slc_table;
+	delete ((SSD_Components::FTL *)this->Firmware)->tac;
 	delete this->Firmware;
 	delete this->Cache_manager;
 	delete this->Host_interface;

@@ -12,7 +12,7 @@
 #include "Stats.h"
 
 #include "Host_Interface_SLC_Table.h"
-
+#include "Tiering_Area_Controller_Base.h"
 /**
  * 수정계획: Flash_Mode_Controller 클래스 정의 및 기능 구현 완료 이후 변수 추가 및 생성자 수정
 */
@@ -56,6 +56,7 @@ namespace SSD_Components
 		TSU_Base * TSU;
 		NVM_PHY_ONFI* PHY;
 		Flash_Mode_Controller * FMC;
+		Tiering_Area_Controller_Base *tac;
 		SLC_Table* slc_table;
 		void Report_results_in_XML(std::string name_prefix, Utils::XmlWriter& xmlwriter);
 	private:

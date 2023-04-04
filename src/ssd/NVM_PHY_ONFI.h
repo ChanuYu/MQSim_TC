@@ -11,7 +11,6 @@
 #include "NVM_PHY_Base.h"
 #include "ONFI_Channel_Base.h"
 
-
 namespace SSD_Components
 {
 	enum class ChipStatus { IDLE, CMD_IN, CMD_DATA_IN, DATA_OUT, READING, WRITING, ERASING, WAIT_FOR_DATA_OUT, WAIT_FOR_COPYBACK_CMD };

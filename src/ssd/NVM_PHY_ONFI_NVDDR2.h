@@ -112,7 +112,7 @@ namespace SSD_Components
 
 		//23.03.08
 		bool isAllTrxSLC(std::list<NVM_Transaction_Flash*>&);
-
+		
 	private:
 		void transfer_read_data_from_chip(ChipBookKeepingEntry* chipBKE, DieBookKeepingEntry* dieBKE, NVM_Transaction_Flash* tr);
 		void perform_interleaved_cmd_data_transfer(NVM::FlashMemory::Flash_Chip* chip, DieBookKeepingEntry* bookKeepingEntry);

@@ -12,6 +12,7 @@
 #include <cstring>
 
 #include "Host_Interface_SLC_Table.h"
+//#include "Tiering_Area_Controller_Base.h"
 
 namespace Host_Components
 {
@@ -30,6 +31,7 @@ namespace SSD_Components
 
 	class Data_Cache_Manager_Base;
 	class Host_Interface_Base;
+	class Tiering_Area_Controller_Base;
 
 	class Input_Stream_Base
 	{
@@ -67,6 +69,12 @@ namespace SSD_Components
 		uint32_t Get_average_write_transaction_execution_time(stream_id_type stream_id);//in microseconds
 		uint32_t Get_average_write_transaction_transfer_time(stream_id_type stream_id);//in microseconds
 		uint32_t Get_average_write_transaction_waiting_time(stream_id_type stream_id);//in microseconds
+	
+		typedef void(*NoRequestSignalHandlerType)();
+		void ConnectToNoRequestSignal(NoRequestSignalHandlerType);
+		std::vector<NoRequestSignalHandlerType> connectedNoRequestSignalHandlers;
+		void broadcastNoRequestSignal();
+
 	protected:
 		Host_Interface_Base* host_interface;
 		virtual void segment_user_request(User_Request* user_request) = 0;
@@ -128,6 +136,7 @@ namespace SSD_Components
 		}
 	
 		SLC_Table *slc_table;
+		Input_Stream_Manager_Base* input_stream_manager;
 
 		//PCIe Switch를 통해 호스트로 전달
 		void Send_read_message_to_host(uint64_t addresss, unsigned int request_read_data_size);
@@ -142,7 +151,6 @@ namespace SSD_Components
 		LHA_type max_logical_sector_address;
 		unsigned int sectors_per_page;
 		static Host_Interface_Base* _my_instance;
-		Input_Stream_Manager_Base* input_stream_manager;
 		Request_Fetch_Unit_Base* request_fetch_unit;
 		Data_Cache_Manager_Base* cache;
 		std::vector<UserRequestArrivedSignalHandlerType> connected_user_request_arrived_signal_handlers;

@@ -42,6 +42,9 @@ namespace SSD_Components
 		void Handle_new_arrived_request(User_Request* request);
 		void Handle_arrived_write_data(User_Request* request);
 		void Handle_serviced_request(User_Request* request);
+
+		void setTieringAreaController(Tiering_Area_Controller_Base *p_tac) {}
+		void broadcastNoRequestSignal() {}
 	private:
 		void segment_user_request(User_Request* user_request);
 		void inform_host_request_completed(User_Request* request);

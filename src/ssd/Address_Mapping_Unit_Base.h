@@ -10,13 +10,10 @@
 #include "FTL.h"
 #include "Flash_Block_Manager_Base.h"
 
-#include "Tiering_Area_Controller_Base.h"
-
 namespace SSD_Components
 {
 	class FTL;
 	class Flash_Block_Manager_Base;
-	class Tiering_Area_Controller_Base;
 
 	typedef uint32_t MVPN_type;
 	typedef uint32_t MPPN_type;
@@ -89,6 +86,16 @@ namespace SSD_Components
 		std::list<std::pair<bool,LPA_type>> hot_data_lru_inactive;
 		unsigned int lru_size_limit;
 		std::set<NVM_Transaction_Flash_WR*>**** write_trx_for_overfull_plane;
+		//Tiering_Area_Controller_Base *tac;
+
+		//tac에서 promotion list를 만들어서 amu->promoteHotdata(std::vector<LPA_type> &promotion_list) 호출,
+		//promotion_list에 티어링할 lpa를 담으면 tac에서 slc tiering 수행
+		void promoteHotdata(std::vector<LPA_type> &promotion_list);
+		//typedef void(*EvictionFinishedSignalHandlerType)(std::vector<LPA_type> &victim_list);
+		//void ConnectToEvictionFinishedSignal(EvictionFinishedSignalHandlerType);
+		//std::vector<EvictionFinishedSignalHandlerType> connectedEvictionFinishedSignalHandlers;
+		//void broadcastEvictionFinishedSignal(std::vector<LPA_type> &victim_list);
+
 	protected:
 		FTL* ftl;
 		NVM_PHY_ONFI* flash_controller;

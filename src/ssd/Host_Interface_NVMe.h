@@ -9,8 +9,12 @@
 #include "User_Request.h"
 #include "Host_Interface_Defs.h"
 
+//#include "Tiering_Area_Controller_Base.h"
+
 namespace SSD_Components
 {
+class Tiering_Area_Controller_Base;
+
 class Input_Stream_NVMe : public Input_Stream_Base
 {
 public:
@@ -57,6 +61,10 @@ public:
 	uint16_t Get_submission_queue_depth(stream_id_type stream_id);
 	uint16_t Get_completion_queue_depth(stream_id_type stream_id);
 	IO_Flow_Priority_Class::Priority Get_priority_class(stream_id_type stream_id);
+
+	//void setTieringAreaController(Tiering_Area_Controller_Base *);
+	//void broadcastNoRequestSignal();
+	//Tiering_Area_Controller_Base *tac;
 
 private:
 	void segment_user_request(User_Request *user_request);

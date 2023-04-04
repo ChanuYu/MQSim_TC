@@ -39,6 +39,17 @@ stream_id_type Input_Stream_Manager_NVMe::Create_new_stream(IO_Flow_Priority_Cla
 	return (stream_id_type)(this->input_streams.size() - 1);
 }
 
+// void Input_Stream_Manager_NVMe::setTieringAreaController(Tiering_Area_Controller_Base *p_tac)
+// {
+// 	std::cout<<"hil: "<<tac<<std::endl;
+// 	tac = p_tac;
+// }
+
+// void Input_Stream_Manager_NVMe::broadcastNoRequestSignal()
+// {
+// 	tac->handleNoRequestSignal();
+// }
+
 inline void Input_Stream_Manager_NVMe::Submission_queue_tail_pointer_update(stream_id_type stream_id, uint16_t tail_pointer_value)
 {
 	((Input_Stream_NVMe *)input_streams[stream_id])->Submission_tail = tail_pointer_value;

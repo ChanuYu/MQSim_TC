@@ -30,6 +30,23 @@ namespace SSD_Components
 	{
 	}
 
+	// void Address_Mapping_Unit_Base::ConnectToNoRequestSignal(NoRequestSignalHandlerType function)
+	// {
+	// 	connectedNoRequestSignalHandlers.push_back(function);
+	// }
+
+	// void Address_Mapping_Unit_Base::broadcastNoRequestSignal()
+	// { 
+	// 	for(std::vector<NoRequestSignalHandlerType>::iterator it = connectedNoRequestSignalHandlers.begin();
+	// 	it != connectedNoRequestSignalHandlers.end();it++)
+	// 		(*it)();
+	// }
+
+	void Address_Mapping_Unit_Base::promoteHotdata(std::vector<LPA_type> &promotion_list)
+	{
+
+	}
+
 	unsigned int Address_Mapping_Unit_Base::Get_device_physical_pages_count()
 	{
 		return total_physical_pages_no;
