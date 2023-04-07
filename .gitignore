@@ -8,5 +8,6 @@ workload_scenario*
 *.xml
 res*
 !ssdconfig.xml
+!workload_overload.xml
 parse*
 *.py
