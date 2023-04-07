@@ -138,6 +138,9 @@ inline void Input_Stream_Manager_NVMe::Handle_serviced_request(User_Request *req
 		}
 	}
 
+	if(((Input_Stream_NVMe *)input_streams[stream_id])->On_the_fly_requests==0)
+		broadcastNoRequestSignal();
+
 	//Check if completion queue is full
 	if (((Input_Stream_NVMe *)input_streams[stream_id])->Completion_head > ((Input_Stream_NVMe *)input_streams[stream_id])->Completion_tail)
 	{
@@ -215,11 +218,13 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 			transaction_size = req_size - handled_sectors_count;
 		}
 		LPA_type lpa = internal_lsa / host_interface->sectors_per_page;
+
+		//std::cout<<"**"<<lpa<<std::endl;
 		
-		if(lpa%8==0)
+		if(lpa%19==0)
 			(*p_table)->changeEntryModeTo(user_request->Stream_id,lpa,Flash_Technology_Type::SLC);
 		bool isSLCTrx = (*p_table)->isLPAEntrySLC(user_request->Stream_id,lpa);
-
+		//bool isSLCTrx = false;
 		page_status_type temp = ~(0xffffffffffffffff << (int)transaction_size);
 		//NVM_Transaction_Flash_WR::page_status_type write_sectors_bitmap
 		access_status_bitmap = temp << (int)(internal_lsa % host_interface->sectors_per_page); //페이지내의 섹터 위치로 이동

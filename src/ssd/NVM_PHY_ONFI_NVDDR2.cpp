@@ -379,6 +379,7 @@ namespace SSD_Components {
 		}
 
 		target_channel->SetStatus(BusChannelStatus::BUSY, targetChip);
+		broadcastChipBusySignal(targetChip->ChipID);
 	}
 
 	void NVM_PHY_ONFI_NVDDR2::Change_memory_status_preconditioning(const NVM::NVM_Memory_Address* address, const void* status_info)

@@ -42,6 +42,7 @@ namespace SSD_Components
         
         virtual bool needToMigrate(PlaneBookKeepingType *pbke) = 0;
         virtual void migrate(std::vector<LPA_type> &victim_pages) = 0;
+        virtual void executeSLCGC(NVM_Transaction_Flash*) = 0;
 
         //amu에서 처리
         virtual void getVictimPages(std::vector<LPA_type> &victim_pages, PlaneBookKeepingType *pbke) = 0;
@@ -51,8 +52,9 @@ namespace SSD_Components
         void resetNoRequestFlag() {no_request_on_Q = false;}
 
         //채널과 칩의 BUSY 상태를 기록 (TSU에서 호출)
-        void process_chip_busy_signal(flash_chip_ID_type chip);
-        void process_channel_busy_signal(flash_channel_ID_type channel);
+        static void handle_chip_busy_signal(NVM::FlashMemory::Flash_Chip *chip);
+        static void handle_chip_busy_signal(flash_chip_ID_type chip);
+        static void handle_channel_busy_signal(flash_channel_ID_type channel);
 
         //채널과 칩의 IDLE 상태를 기록 (NVM_PHY_ONFI_NVDDR2에서 broadcast)
         static void handle_chip_idle_signal(NVM::FlashMemory::Flash_Chip *chip);

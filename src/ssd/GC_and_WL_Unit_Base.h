@@ -9,6 +9,8 @@
 #include "TSU_Base.h"
 #include "NVM_PHY_ONFI.h"
 
+#define MIN_SLC_BLOCK_THRESHOLD 3
+
 namespace SSD_Components
 {
 	enum class GC_Block_Selection_Policy_Type {
@@ -30,7 +32,7 @@ namespace SSD_Components
 	class NVM_PHY_ONFI;
 	class PlaneBookKeepingType;
 	class Block_Pool_Slot_Type;
-
+	class Tiering_Area_Controller;
 	/*
 	* This class implements thet the Garbage Collection and Wear Leveling module of MQSim.
 	*/
@@ -50,7 +52,7 @@ namespace SSD_Components
 		void Execute_simulator_event(MQSimEngine::Sim_Event*);
 
 		virtual bool GC_is_in_urgent_mode(const NVM::FlashMemory::Flash_Chip*) = 0;
-		virtual void Check_gc_required(const unsigned int BlockPoolSize, const NVM::FlashMemory::Physical_Page_Address& planeAddress, bool is_slc = false) = 0;
+		virtual void Check_gc_required(const unsigned int BlockPoolSize, const NVM::FlashMemory::Physical_Page_Address& planeAddress, stream_id_type stream_id = 0, bool is_slc = false) = 0;
 		GC_Block_Selection_Policy_Type Get_gc_policy();
 		unsigned int Get_GC_policy_specific_parameter();//Returns the parameter specific to the GC block selection policy: threshold for random_pp, set_size for RGA
 		unsigned int Get_minimum_number_of_free_pages_before_GC();
@@ -100,6 +102,7 @@ namespace SSD_Components
 		unsigned int sector_no_per_page;
 
 		SLC_Table *slc_table;
+		friend class Tiering_Area_Controller;
 	};
 }
 

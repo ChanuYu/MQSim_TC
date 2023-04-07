@@ -62,14 +62,16 @@ namespace SSD_Components
 					default:
 						PRINT_ERROR("Unexpected situation in the GC_and_WL_Unit_Base function!")
 				}
-				//transaction의 타겟이 존재하는 블록에 진행 중인 gc_wl이 있을 경우 block erase 실행
+				//transaction의 타겟이 존재하는 블록에 진행해야 할 gc_wl이 있을 경우 block erase 실행
+				//Check_gc_required에서 GC_WL_started()를 호출한 경우에 해당하며 해당 블록에 진행 중인 커맨드가 끝났으므로 gc수행
 				if (_my_instance->block_manager->Block_has_ongoing_gc_wl(transaction->Address)) {
 					if (_my_instance->block_manager->Can_execute_gc_wl(transaction->Address)) {
 						NVM::FlashMemory::Physical_Page_Address gc_wl_candidate_address(transaction->Address);
 						Block_Pool_Slot_Type* block = &pbke->Blocks[transaction->Address.BlockID];
 						Stats::Total_gc_executions++;
+						//std::cout<<"handle_trx_serviced "<<transaction->Address.ChannelID<<"-"<<transaction->Address.ChipID<<"-"<<transaction->Address.DieID<<"-"<<transaction->Address.PlaneID<<", is slc: "<<transaction->isSLCTrx<<std::endl;
 						_my_instance->tsu->Prepare_for_transaction_submit();
-						NVM_Transaction_Flash_ER* gc_wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, block->Stream_id, gc_wl_candidate_address);
+						NVM_Transaction_Flash_ER* gc_wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, block->Stream_id, gc_wl_candidate_address,transaction->isSLCTrx);
 						
 						if(transaction->isSLCTrx)
 							Stats::Total_slc_area_gc_executions++;						
@@ -86,15 +88,15 @@ namespace SSD_Components
 									if (_my_instance->use_copyback) {
 										//플레인내에서 바로 이동
 										gc_wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-											NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), NULL, 0, NULL, 0, INVALID_TIME_STAMP);
+											NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), NULL, 0, NULL, 0, INVALID_TIME_STAMP,false);
 										gc_wl_write->ExecutionMode = WriteExecutionModeType::COPYBACK;
 										_my_instance->tsu->Submit_transaction(gc_wl_write);
 									} else {
 										//플래시 메모리 내용 읽고 새로운 페이지에 쓰기
 										gc_wl_read = new NVM_Transaction_Flash_RD(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-											NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), gc_wl_candidate_address, NULL, 0, NULL, 0, INVALID_TIME_STAMP);
+											NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), gc_wl_candidate_address, NULL, 0, NULL, 0, INVALID_TIME_STAMP, transaction->isSLCTrx);
 										gc_wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-											NO_LPA, NO_PPA, gc_wl_candidate_address, NULL, 0, gc_wl_read, 0, INVALID_TIME_STAMP);
+											NO_LPA, NO_PPA, gc_wl_candidate_address, NULL, 0, gc_wl_read, 0, INVALID_TIME_STAMP, false);
 										gc_wl_write->ExecutionMode = WriteExecutionModeType::SIMPLE;
 										gc_wl_write->RelatedErase = gc_wl_erase_tr;
 										gc_wl_read->RelatedWrite = gc_wl_write;
@@ -106,100 +108,6 @@ namespace SSD_Components
 						}
 						block->Erase_transaction = gc_wl_erase_tr;
 						_my_instance->tsu->Schedule();
-					}
-				}
-				else if(transaction->isSLCTrx) { //조기에 SLC 영역의 공간이 다 차는 경우 SLC 영역의 GC 수행
-					PlaneBookKeepingType *pbke = _my_instance->block_manager->Get_plane_bookkeeping_entry(transaction->Address);
-					unsigned int block_gc_threshold = (unsigned int)(_my_instance->gc_threshold * (double)pbke->slc_blocks.size());
-					if(_my_instance->block_manager->Get_pool_size(transaction->Address,transaction->isSLCTrx) < block_gc_threshold) {
-						flash_block_ID_type gc_candidate_block_id;
-						
-						if (pbke->Ongoing_erase_operations.size() >= _my_instance->max_ongoing_gc_reqs_per_plane)
-							return;
-
-						//block selection policy가 RGA임을 가정
-						std::set<flash_block_ID_type> random_set;
-						std::map<flash_block_ID_type,Block_Pool_Slot_Type*>::iterator iter = pbke->slc_blocks.begin();
-						while (random_set.size() < _my_instance->rga_set_size) {
-							flash_block_ID_type block_id = _my_instance->random_generator.Uniform_uint(0, pbke->slc_blocks.size() - 1);
-							std::advance(iter,block_id);
-							block_id = iter->second->BlockID;
-							
-
-							if (pbke->Ongoing_erase_operations.find(block_id) == pbke->Ongoing_erase_operations.end()
-								&& _my_instance->is_safe_gc_wl_candidate(pbke, block_id)) {
-								random_set.insert(block_id);
-							}
-						}
-						gc_candidate_block_id = *random_set.begin();
-						for(auto &block_id : random_set) {
-							if (pbke->Blocks[block_id].Invalid_page_count > pbke->Blocks[gc_candidate_block_id].Invalid_page_count
-								&& pbke->Blocks[block_id].Current_page_write_index == pbke->Blocks[block_id].Last_page_index + 1) {
-								gc_candidate_block_id = block_id;
-							}
-						}
-
-						//에러 확인
-						if (pbke->Ongoing_erase_operations.find(gc_candidate_block_id) != pbke->Ongoing_erase_operations.end()) {
-							PRINT_ERROR("GC operation has already operated on the block")
-							return;
-						}
-						
-						NVM::FlashMemory::Physical_Page_Address gc_candidate_address(transaction->Address);
-						gc_candidate_address.BlockID = gc_candidate_block_id;
-						Block_Pool_Slot_Type* block = &pbke->Blocks[gc_candidate_block_id];
-
-						//No invalid page to erase
-						if (block->Current_page_write_index == 0 || block->Invalid_page_count == 0) {
-							return;
-						}
-						
-						//Run the state machine to protect against race condition
-						_my_instance->block_manager->GC_WL_started(gc_candidate_address); //plane_record->Blocks[block_address.BlockID].Has_ongoing_gc_wl = true;
-						pbke->Ongoing_erase_operations.insert(gc_candidate_block_id);
-						_my_instance->address_mapping_unit->Set_barrier_for_accessing_physical_block(gc_candidate_address);//Lock the block, so no user request can intervene while the GC is progressing
-						
-						//If there are ongoing requests targeting the candidate block, the gc execution should be postponed
-						if (_my_instance->block_manager->Can_execute_gc_wl(gc_candidate_address)) { //해당 block에 ongoing user program count와 ongoing user read count가 0이어야 함
-							Stats::Total_gc_executions++;
-							Stats::Total_slc_area_gc_executions++;
-							_my_instance->tsu->Prepare_for_transaction_submit();
-
-							NVM_Transaction_Flash_ER* gc_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, pbke->Blocks[gc_candidate_block_id].Stream_id, gc_candidate_address);
-							//If there are some valid pages in block, then prepare flash transactions for page movement
-							if (block->Current_page_write_index - block->Invalid_page_count > 0) {
-								NVM_Transaction_Flash_RD* gc_read = NULL;
-								NVM_Transaction_Flash_WR* gc_write = NULL;
-								for (flash_page_ID_type pageID = 0; pageID < block->Current_page_write_index; pageID++) {
-									if (_my_instance->block_manager->Is_page_valid(block, pageID)) {
-										Stats::Total_page_movements_for_gc++;
-										gc_candidate_address.PageID = pageID;
-
-										//SLC trx 발행
-										if (_my_instance->use_copyback) {
-											gc_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-												NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_candidate_address), NULL, 0, NULL, 0, INVALID_TIME_STAMP,true);
-											gc_write->ExecutionMode = WriteExecutionModeType::COPYBACK;
-											_my_instance->tsu->Submit_transaction(gc_write);
-										} else {
-											gc_read = new NVM_Transaction_Flash_RD(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-												NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_candidate_address), gc_candidate_address, NULL, 0, NULL, 0, INVALID_TIME_STAMP,true);
-											gc_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-												NO_LPA, NO_PPA, gc_candidate_address, NULL, 0, gc_read, 0, INVALID_TIME_STAMP,true);
-											gc_write->ExecutionMode = WriteExecutionModeType::SIMPLE;
-											gc_write->RelatedErase = gc_erase_tr;
-											gc_read->RelatedWrite = gc_write;
-											_my_instance->tsu->Submit_transaction(gc_read);//Only the read transaction would be submitted. The Write transaction is submitted when the read transaction is finished and the LPA of the target page is determined
-										}
-										gc_erase_tr->Page_movement_activities.push_back(gc_write);
-									}
-								}
-							}
-							block->Erase_transaction = gc_erase_tr;
-							_my_instance->tsu->Submit_transaction(gc_erase_tr);
-
-							_my_instance->tsu->Schedule();
-						}
 					}
 				}
 				return;
@@ -263,9 +171,9 @@ namespace SSD_Components
 				}
 				_my_instance->address_mapping_unit->Start_servicing_writes_for_overfull_plane(transaction->Address);//Must be inovked after above statements since it may lead to flash page consumption for waiting program transactions
 
-				if (_my_instance->Stop_servicing_writes(transaction->Address,transaction->isSLCTrx)) {
-					std::cout<<"stop servicing writes"<<std::endl;
-					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(transaction->isSLCTrx), transaction->Address);
+				//GC Erase Transaction 완료 이후의 StopServicing write의 검사는 TLC영역의 크기 확인을 위해서 진행
+				if (_my_instance->Stop_servicing_writes(transaction->Address,false)) {
+					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(false), transaction->Address,transaction->Stream_id);
 				}
 				break;
 		} //switch (transaction->Type)
@@ -324,7 +232,8 @@ namespace SSD_Components
 	{
 		//slc의 경우 더 이상 slc 영역이 존재하지 않을 때까지 수행
 		if(is_slc)
-			return block_manager->Get_pool_size(plane_address,true) < (unsigned int)(gc_threshold * (block_manager->Get_plane_bookkeeping_entry(plane_address))->slc_blocks.size());
+			//return block_manager->Get_pool_size(plane_address,true) < (unsigned int)(gc_threshold * (block_manager->Get_plane_bookkeeping_entry(plane_address))->slc_blocks.size());
+			PRINT_ERROR("The transaction should be programmed to TLC")
 		else
 			return block_manager->Get_pool_size(plane_address, false) < max_ongoing_gc_reqs_per_plane;
 		//아직 인터페이스가 완성되지 않아서 SLC 영역 풀 사이즈를 반환할 경우 write가 서비스되지 않음 => 차후 수정 필요
@@ -341,7 +250,7 @@ namespace SSD_Components
 				|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->Translation_wf[stream_id]
 				|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->GC_wf[stream_id]
 				|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->Data_wf_slc[stream_id]
-				|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->GC_wf_slc[stream_id]) {
+				/*|| (&plane_record->Blocks[gc_wl_candidate_block_id]) == plane_record->GC_wf_slc[stream_id]*/) {
 				return false;
 			}
 		}
@@ -363,6 +272,7 @@ namespace SSD_Components
 		return static_wearleveling_enabled && (block_manager->Get_min_max_erase_difference(plane_address) >= static_wearleveling_threshold);
 	}
 
+	//tlc영역에 대해서만 static wearleveling을 수행하도록 되어 있음 
 	void GC_and_WL_Unit_Base::run_static_wearleveling(const NVM::FlashMemory::Physical_Page_Address plane_address)
 	{
 		PlaneBookKeepingType* pbke = block_manager->Get_plane_bookkeeping_entry(plane_address);
@@ -384,7 +294,8 @@ namespace SSD_Components
 			Stats::Total_wl_executions++;
 			tsu->Prepare_for_transaction_submit();
 
-			NVM_Transaction_Flash_ER* wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, pbke->Blocks[wl_candidate_block_id].Stream_id, wl_candidate_address);
+			//slc 영역에서는 static wl을 수행하지 않음
+			NVM_Transaction_Flash_ER* wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, pbke->Blocks[wl_candidate_block_id].Stream_id, wl_candidate_address,false/*pbke->Blocks[wl_candidate_block_id].isSLC*/);
 			if (block->Current_page_write_index - block->Invalid_page_count > 0) {//If there are some valid pages in block, then prepare flash transactions for page movement
 				NVM_Transaction_Flash_RD* wl_read = NULL;
 				NVM_Transaction_Flash_WR* wl_write = NULL;
@@ -399,9 +310,9 @@ namespace SSD_Components
 							tsu->Submit_transaction(wl_write);
 						} else {
 							wl_read = new NVM_Transaction_Flash_RD(Transaction_Source_Type::GC_WL, block->Stream_id, sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-								NO_LPA, address_mapping_unit->Convert_address_to_ppa(wl_candidate_address), wl_candidate_address, NULL, 0, NULL, 0, INVALID_TIME_STAMP);
+								NO_LPA, address_mapping_unit->Convert_address_to_ppa(wl_candidate_address), wl_candidate_address, NULL, 0, NULL, 0, INVALID_TIME_STAMP, false);
 							wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-								NO_LPA, NO_PPA, wl_candidate_address, NULL, 0, wl_read, 0, INVALID_TIME_STAMP);
+								NO_LPA, NO_PPA, wl_candidate_address, NULL, 0, wl_read, 0, INVALID_TIME_STAMP, false);
 							wl_write->ExecutionMode = WriteExecutionModeType::SIMPLE;
 							wl_write->RelatedErase = wl_erase_tr;
 							wl_read->RelatedWrite = wl_write;

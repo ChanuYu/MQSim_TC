@@ -19,12 +19,31 @@ namespace SSD_Components
 	{
 	}
 
+	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_user_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address)
+	{
+		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];
+		plane_record->Valid_pages_count++;
+		plane_record->Free_pages_count--;		
+		page_address.BlockID = plane_record->Data_wf[stream_id]->BlockID;
+		page_address.PageID = plane_record->Data_wf[stream_id]->Current_page_write_index++;
+		program_transaction_issued(page_address);
+
+		//The current write frontier block is written to the end
+		if(plane_record->Data_wf[stream_id]->Current_page_write_index == pages_no_per_block) {
+			//Assign a new write frontier block
+			plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false);
+			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address,stream_id);
+		}
+
+		plane_record->Check_bookkeeping_correctness(page_address);
+	}
+
 	/**
 	 * 할당된 plane에 대하여 block을 지정하여 bookkeeping 
 	 * 수정계획: transaction별로 행선지(slc/tlc)를 기록하는 변수를 두고 그에 따라 블록 할당 (Data_wf_slc/Data_wf_tlc) 
 	 * read/write(gc가 아닌 경우만 해당) 둘 다 이 함수를 거침
 	*/
-	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_user_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address, bool isSLC)
+	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_user_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address, bool &isSLC)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];
 		plane_record->Valid_pages_count++;
@@ -34,38 +53,47 @@ namespace SSD_Components
 		Block_Pool_Slot_Type **data_wf = isSLC ? &plane_record->Data_wf_slc[stream_id] : &plane_record->Data_wf[stream_id];
 
 		if((*data_wf)==NULL)
-			PRINT_ERROR("Abnormal access to data_wf block")
+		{
+			data_wf = &plane_record->Data_wf[stream_id];
+			isSLC = false;
+		}
 
 		page_address.BlockID = (*data_wf)->BlockID;
 		page_address.PageID = (*data_wf)->Current_page_write_index++;
 
 		program_transaction_issued(page_address);
 
-		//수정 - 23.03.15
 		//The current write frontier block is written to the end
-		//prev: pages_no_per_block
 		if((*data_wf)->Current_page_write_index == (*data_wf)->Last_page_index + 1) {
+			//블록을 다 사용한 경우에 한 해서 slc_block_history에 추가
+			plane_record->slc_block_history.push((*data_wf)->BlockID);
+
 			//Assign a new write frontier block
-			//plane_record->Data_wf[stream_id] = plane_record->Get_a_free_block(stream_id, false);
-			(*data_wf) = plane_record->Get_a_free_block(stream_id,false,isSLC);
-			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함
+			(*data_wf) = plane_record->Get_a_free_block(stream_id,false,isSLC); //slc의 경우 더 이상 free block이 없으면 NULL 반환	
+			
+			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address,stream_id,isSLC); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함
 		}
 
 		plane_record->Check_bookkeeping_correctness(page_address);
 	}
 
 	//gc_wf 블록에 주소 할당
-	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address, bool isSLC)
+	void Flash_Block_Manager::Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type stream_id, NVM::FlashMemory::Physical_Page_Address& page_address)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];
 		plane_record->Valid_pages_count++;
 		plane_record->Free_pages_count--;
 
 		//수정 - 23.03.15
-		Block_Pool_Slot_Type **gc_wf = isSLC ? &plane_record->GC_wf_slc[stream_id] : &plane_record->GC_wf[stream_id];
+		Block_Pool_Slot_Type **gc_wf = &plane_record->GC_wf[stream_id];
 
+		/*
 		if((*gc_wf)==NULL)
-			PRINT_ERROR("Abnormal access to gc_wf block")
+		{
+			gc_wf = &plane_record->GC_wf[stream_id];
+			isSLC = false;
+		}
+		*/
 
 		page_address.BlockID = (*gc_wf)->BlockID;
 		page_address.PageID = (*gc_wf)->Current_page_write_index++;
@@ -77,7 +105,7 @@ namespace SSD_Components
 		if ((*gc_wf)->Current_page_write_index == (*gc_wf)->Last_page_index + 1) {
 			//Assign a new write frontier block
 			(*gc_wf) = plane_record->Get_a_free_block(stream_id, false);
-			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address);
+			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(false), page_address,stream_id);
 		}
 		plane_record->Check_bookkeeping_correctness(page_address);
 	}
@@ -132,7 +160,7 @@ namespace SSD_Components
 			//Assign a new write frontier block
 			plane_record->Translation_wf[streamID] = plane_record->Get_a_free_block(streamID, true);
 			if (!is_for_gc) {
-				gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(false), page_address);
+				gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(false), page_address, streamID);
 			}
 		}
 		plane_record->Check_bookkeeping_correctness(page_address);
@@ -167,7 +195,6 @@ namespace SSD_Components
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID];
 		Block_Pool_Slot_Type* block = &(plane_record->Blocks[block_address.BlockID]);
-		bool is_slc_block = block->isSLC;
 		plane_record->Free_pages_count += block->Invalid_page_count;
 		plane_record->Invalid_pages_count -= block->Invalid_page_count;
 
@@ -176,9 +203,10 @@ namespace SSD_Components
 		Stats::Block_erase_histogram[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID][block->Erase_count]++;
 		plane_record->Add_to_free_block_pool(block, gc_and_wl_unit->Use_dynamic_wearleveling());
 
-		//slc 블록을 지운 경우 새로 slc 블록 추가
-		if(is_slc_block)
-			transformToSLCBlocks(plane_record, gc_and_wl_unit->Use_dynamic_wearleveling());
+		//slc 블록을 지운 경우 새로 slc 블록 추가 --(수정) --> GC로 erase된 이후 무조건 TLC로 추가, TLC에서 SLC로 가져오는 함수를 따로 호출
+		//bool is_slc_block = block->isSLC;
+		//if(is_slc_block)
+		//	transformToSLCBlocks(plane_record, gc_and_wl_unit->Use_dynamic_wearleveling());
 
 		plane_record->Check_bookkeeping_correctness(block_address);
 	}

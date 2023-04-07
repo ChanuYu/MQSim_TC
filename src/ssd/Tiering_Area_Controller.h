@@ -11,7 +11,6 @@ namespace SSD_Components
         Tiering_Area_Controller(GC_and_WL_Unit_Base *gc_wl, Address_Mapping_Unit_Base *amu, Flash_Block_Manager_Base *block_manager, TSU_Base *tsu, NVM_PHY_ONFI* flash_controller, Host_Interface_Base *hil,/*unsigned short *p_on_the_fly_requests,*/
                                     unsigned int channel, unsigned int chip, unsigned int die, unsigned int plane, unsigned int block, unsigned int page);
         ~Tiering_Area_Controller();
-        void handleNoRequestSignal();
 
         unsigned int getCurrentSLCAreaSize(PlaneBookKeepingType *pbke);
         double getCurrentUtilization();
@@ -23,6 +22,7 @@ namespace SSD_Components
         void decreaseSLCArea(unsigned int change_amount);
         bool needToMigrate(PlaneBookKeepingType *pbke);
         void migrate(std::vector<LPA_type> &victim_pages);
+        void executeSLCGC(NVM_Transaction_Flash*);
         void getVictimPages(std::vector<LPA_type> &victim_pages, PlaneBookKeepingType *pbke);
     
         int calculateSpaceToBeAdjusted(double util);

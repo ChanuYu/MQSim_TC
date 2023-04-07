@@ -29,7 +29,8 @@ namespace SSD_Components
 	* 5: GC_USER -> GC
 	*/
 	enum class Block_Service_Status {IDLE, GC_WL, USER, GC_USER, GC_UWAIT, GC_USER_UWAIT};
-	
+	enum class ExecutionStatus {SUCCESS, FAIL, NONE};
+
 	class Block_Pool_Slot_Type
 	{
 	public:
@@ -69,13 +70,15 @@ namespace SSD_Components
 		Block_Pool_Slot_Type** Data_wf, ** GC_wf; //The write frontier blocks for data and GC pages. MQSim adopts Double Write Frontier approach for user and GC writes which is shown very advantages in: B. Van Houdt, "On the necessity of hot and cold data identification to reduce the write amplification in flash - based SSDs", Perf. Eval., 2014
 		Block_Pool_Slot_Type** Translation_wf; //The write frontier blocks for translation GC pages
 
-		/**
-		 * Free_block_pool <---> free_slc_blocks <---> Data(GC)_wf_slc <---> slc_blocks
+		/**두 개 스트림(멀티스트림)까지만 호환가능한데 성능 안좋을 가능성 큼
+		 * 성능테스트의 경우 단일스트림으로 확인하기
+		 * 
+		 * Free_block_pool <---> free_slc_blocks <---> Data_wf_slc <---> slc_blocks
 		*/
 		std::map<flash_block_ID_type,Block_Pool_Slot_Type*> slc_blocks; //slc모드로 programmed된 블록을 관리
 		std::multimap<unsigned int, Block_Pool_Slot_Type*> free_slc_blocks; //아직 program되지 않은 slc블록 관리
-		Block_Pool_Slot_Type** Data_wf_slc, **GC_wf_slc;
-		std::list<flash_block_ID_type> slc_block_history; //각 플레인별 히스토리 기록 
+		Block_Pool_Slot_Type** Data_wf_slc;  //**GC_wf_slc; //두 개 스트림(멀티스트림)까지만 호환가능
+		std::queue<flash_block_ID_type> slc_block_history; 
 
 		//GC victim block 선정방식이 FIFO가 아니라면 신경 쓸 필요 x <- TLC Compression을 위해 고려해야 함 (SLC/TLC 구분해서 관리)
 		std::queue<flash_block_ID_type> Block_usage_history;//A fifo queue that keeps track of flash blocks based on their usage history
@@ -112,8 +115,9 @@ namespace SSD_Components
 			unsigned int channel_count, unsigned int chip_no_per_channel, unsigned int die_no_per_chip, unsigned int plane_no_per_die,
 			unsigned int block_no_per_plane, unsigned int page_no_per_block, unsigned int initial_slc_blk);
 		virtual ~Flash_Block_Manager_Base();
-		virtual void Allocate_block_and_page_in_plane_for_user_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool isSLC = false) = 0;
-		virtual void Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool isSLC=false) = 0;
+		virtual void Allocate_block_and_page_in_plane_for_user_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address) = 0;
+		virtual void Allocate_block_and_page_in_plane_for_user_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool &isSLC) = 0;
+		virtual void Allocate_block_and_page_in_plane_for_gc_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address) = 0;
 		virtual void Allocate_block_and_page_in_plane_for_translation_write(const stream_id_type streamID, NVM::FlashMemory::Physical_Page_Address& address, bool is_for_gc) = 0;
 		virtual void Allocate_Pages_in_block_and_invalidate_remaining_for_preconditioning(const stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& plane_address, std::vector<NVM::FlashMemory::Physical_Page_Address>& page_addresses) = 0;
 		virtual void Invalidate_page_in_block(const stream_id_type streamID, const NVM::FlashMemory::Physical_Page_Address& address) = 0;
@@ -128,6 +132,7 @@ namespace SSD_Components
 		bool Block_has_ongoing_gc_wl(const NVM::FlashMemory::Physical_Page_Address& block_address);//Checks if there is an ongoing gc for block_address
 		bool Can_execute_gc_wl(const NVM::FlashMemory::Physical_Page_Address& block_address);//Checks if the gc request can be executed on block_address (there shouldn't be any ongoing user read/program requests targeting block_address)
 		void GC_WL_started(const NVM::FlashMemory::Physical_Page_Address& block_address);//Updates the block bookkeeping record
+		void Cancel_GC_WL_started(const NVM::FlashMemory::Physical_Page_Address& block_address);
 		void GC_WL_finished(const NVM::FlashMemory::Physical_Page_Address& block_address);//Updates the block bookkeeping record
 		void Read_transaction_issued(const NVM::FlashMemory::Physical_Page_Address& page_address);//Updates the block bookkeeping record
 		void Read_transaction_serviced(const NVM::FlashMemory::Physical_Page_Address& page_address);//Updates the block bookkeeping record
@@ -136,8 +141,8 @@ namespace SSD_Components
 		bool Is_page_valid(Block_Pool_Slot_Type* block, flash_page_ID_type page_id);//Make the page invalid in the block bookkeeping record
 		
 		//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
-		void transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false);
-		void transformToTLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false);
+		ExecutionStatus transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false);
+		ExecutionStatus transformToTLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl = false);
 
 		//모든 플레인이 동일한 slc 블록 수를 갖고 있는 것은 아님 => 대략적인 현상황을 알리는 척도로만 사용
 		//현재 플레인별 블록수를 어떻게 맞출지는 정하지 않음

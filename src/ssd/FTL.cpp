@@ -757,8 +757,12 @@ namespace SSD_Components
 		std::string tmp = name_prefix + ".FTL";
 		xmlwriter.Write_start_element_tag(tmp);
 
-		std::string attr = "Issued_Flash_Read_CMD";
-		std::string val = std::to_string(Stats::IssuedReadCMD);
+		std::string attr = "Issued_Transaction";
+		std::string val = std::to_string(Stats::issuedTrx);
+		xmlwriter.Write_attribute_string_inline(attr, val);
+
+		attr = "Issued_Flash_Read_CMD";
+		val = std::to_string(Stats::IssuedReadCMD);
 		xmlwriter.Write_attribute_string_inline(attr, val);
 
 		attr = "Issued_Flash_Interleaved_Read_CMD";

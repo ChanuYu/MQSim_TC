@@ -67,15 +67,14 @@ namespace SSD_Components
 
 						//수정 - 23.03.15
 						plane_manager[channelID][chipID][dieID][planeID].Data_wf_slc = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
-						plane_manager[channelID][chipID][dieID][planeID].GC_wf_slc = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
-
+						//plane_manager[channelID][chipID][dieID][planeID].GC_wf_slc = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
 						for (unsigned int stream_cntr = 0; stream_cntr < total_concurrent_streams_no; stream_cntr++) {
 							plane_manager[channelID][chipID][dieID][planeID].Data_wf[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false);
 							plane_manager[channelID][chipID][dieID][planeID].Translation_wf[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, true);
 							plane_manager[channelID][chipID][dieID][planeID].GC_wf[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false);
 
 							plane_manager[channelID][chipID][dieID][planeID].Data_wf_slc[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false, true);
-							plane_manager[channelID][chipID][dieID][planeID].GC_wf_slc[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false, true);
+							//plane_manager[channelID][chipID][dieID][planeID].GC_wf_slc[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false, true);
 						}
 					}
 				}
@@ -236,10 +235,13 @@ namespace SSD_Components
 	//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
 	//plane별로 slc로 전환해야 할 블록의 수를 넘겨주면 각종 변수 조정 및 free_slc_block 풀로 이동
 	//호출시기: 미정
-	void Flash_Block_Manager_Base::transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl)
+	ExecutionStatus Flash_Block_Manager_Base::transformToSLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl)
 	{
-		if(pbke->Free_block_pool.size() < num)
-			PRINT_ERROR("transformToSLCBlocks: Requesting free blocks over the current number of free blocks")
+		if(pbke->Free_block_pool.size() < num) {
+			//Tiering Area Controller에서 slc영역 데이터를 demote하고 영역을 줄이는 함수 호출하도록 구현 필요
+
+			return ExecutionStatus::FAIL; //GC에서 별도로 처리하지 않고 대기
+		}
 
 		Block_Pool_Slot_Type *block = NULL;
 		unsigned int erase_count;
@@ -258,17 +260,19 @@ namespace SSD_Components
 		pbke->Free_pages_count -= num * pages_no_per_block;
 		pbke->Invalid_pages_count += num * pages_no_per_block;
 		pbke->setNumOfSLCBlocks(pbke->getCurNumOfSLCBlocks() + num);
+
+		return ExecutionStatus::SUCCESS;
 	}
 
 	//Free_block_pool <---> free_slc_blocks => FBM::transformToSLCBlocks()
 	//SLC block의 내용을 erase 하는 것은 별도의 함수
-	void Flash_Block_Manager_Base::transformToTLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl)
+	ExecutionStatus Flash_Block_Manager_Base::transformToTLCBlocks(PlaneBookKeepingType *pbke, unsigned int num, bool consider_dynamic_wl)
 	{
 		if(pbke->free_slc_blocks.size() < num)
 		{
 			//pbke->slc_blocks에서 잘 안 쓰이는 데이터 마이그레이션 후 free_slc_blocks로 추가하는 함수 호출
 			//event 재등록
-			return; //아직 migration이 완료되지 않았으므로 event를 재등록하고 return
+			return ExecutionStatus::FAIL; //아직 migration이 완료되지 않았으므로 event를 재등록하고 return
 		}
 
 		std::map<flash_block_ID_type,Block_Pool_Slot_Type*>::iterator iter;
@@ -289,6 +293,8 @@ namespace SSD_Components
 			else
 				PRINT_ERROR("The block is not in SLC pool")
 		}
+
+		return ExecutionStatus::SUCCESS;
 	}
 
 	//SLC 영역이 아닌 경우에 대해서 min, max 계산으로 변경
@@ -347,7 +353,7 @@ namespace SSD_Components
 		return &(plane_manager[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID]);
 	}
 
-	//block이 위치한 플레인의 Has_ongoing_gc_wl 변수 값 반환
+	//return plane_record->Blocks[block_address.BlockID].Has_ongoing_gc_wl;
 	bool Flash_Block_Manager_Base::Block_has_ongoing_gc_wl(const NVM::FlashMemory::Physical_Page_Address& block_address)
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID];
@@ -366,6 +372,11 @@ namespace SSD_Components
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID];
 		plane_record->Blocks[block_address.BlockID].Has_ongoing_gc_wl = true;
+	}
+	void Flash_Block_Manager_Base::Cancel_GC_WL_started(const NVM::FlashMemory::Physical_Page_Address& block_address)
+	{
+		PlaneBookKeepingType *plane_record = &plane_manager[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID];
+		plane_record->Blocks[block_address.BlockID].Has_ongoing_gc_wl = false;
 	}
 	
 	//plane_record->Blocks[page_address.BlockID].Ongoing_user_program_count++ 수행

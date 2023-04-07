@@ -25,7 +25,7 @@
 		<Data_Cache_DRAM_tRP>13</Data_Cache_DRAM_tRP>
 		<Address_Mapping>PAGE_LEVEL</Address_Mapping>
 		<Ideal_Mapping_Table>true</Ideal_Mapping_Table>
-		<Initial_SLC_Blk_Per_Plane>12</Initial_SLC_Blk_Per_Plane>
+		<Initial_SLC_Blk_Per_Plane>2</Initial_SLC_Blk_Per_Plane>
 		<CMT_Capacity>2097152</CMT_Capacity>
 		<CMT_Sharing_Mode>SHARED</CMT_Sharing_Mode>
 		<Plane_Allocation_Scheme>CWDP</Plane_Allocation_Scheme>

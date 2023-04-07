@@ -34,6 +34,11 @@ namespace SSD_Components
 		virtual void Send_command_to_chip(std::list<NVM_Transaction_Flash*>& transactionList) = 0;
 		virtual void Change_flash_page_status_for_preconditioning(const NVM::FlashMemory::Physical_Page_Address& page_address, const LPA_type lpa) = 0;
 
+		typedef void(*ChannelBusyHandlerType)(flash_channel_ID_type);
+		void ConnectToChannelBusySignal(ChannelBusyHandlerType);
+		typedef void(*ChipBusyHandlerType)(flash_chip_ID_type);
+		void ConnectToChipBusySignal(ChipBusyHandlerType);
+
 		typedef void(*TransactionServicedHandlerType) (NVM_Transaction_Flash*);
 		void ConnectToTransactionServicedSignal(TransactionServicedHandlerType);
 		typedef void(*ChannelIdleHandlerType) (flash_channel_ID_type);
@@ -45,6 +50,10 @@ namespace SSD_Components
 		unsigned int chip_no_per_channel;
 		unsigned int die_no_per_chip;
 		unsigned int plane_no_per_die;
+		std::vector<ChannelBusyHandlerType> connectedChannelBusyHandlers;
+		void broadcastChannelBusySignal(flash_channel_ID_type);
+		std::vector<ChipBusyHandlerType> connectedChipBusyHandlers;
+		void broadcastChipBusySignal(flash_chip_ID_type);
 		std::vector<TransactionServicedHandlerType> connectedTransactionServicedHandlers;
 		void broadcastTransactionServicedSignal(NVM_Transaction_Flash* transaction);
 		std::vector<ChannelIdleHandlerType> connectedChannelIdleHandlers;

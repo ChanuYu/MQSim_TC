@@ -1,6 +1,33 @@
 #include "NVM_PHY_ONFI.h"
 
 namespace SSD_Components {
+
+	void NVM_PHY_ONFI::ConnectToChannelBusySignal(ChannelBusyHandlerType function)
+	{
+		connectedChannelBusyHandlers.push_back(function);
+	}
+
+	void NVM_PHY_ONFI::broadcastChannelBusySignal(flash_channel_ID_type channel)
+	{
+		for (std::vector<ChannelBusyHandlerType>::iterator it = connectedChannelBusyHandlers.begin();
+			it != connectedChannelBusyHandlers.end(); it++) {
+			(*it)(channel);
+		}
+	}
+
+	void NVM_PHY_ONFI::ConnectToChipBusySignal(ChipBusyHandlerType function)
+	{
+		connectedChipBusyHandlers.push_back(function);
+	}
+
+	void NVM_PHY_ONFI::broadcastChipBusySignal(flash_chip_ID_type chip)
+	{
+		for (std::vector<ChipBusyHandlerType>::iterator it = connectedChipBusyHandlers.begin();
+			it != connectedChipBusyHandlers.end(); it++) {
+			(*it)(chip);
+		}
+	}
+
 	void NVM_PHY_ONFI::ConnectToTransactionServicedSignal(TransactionServicedHandlerType function)
 	{
 		//handle_transaction_serviced_signal_from_PHY

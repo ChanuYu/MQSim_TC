@@ -489,13 +489,13 @@ namespace SSD_Components
 		//translate lpa to ppa
 		for (std::list<NVM_Transaction*>::const_iterator it = transactionList.begin();
 			it != transactionList.end(); ) {
-			
+			/*
 			//hotdata lru 업데이트
 			if(prev_LPA != ((NVM_Transaction_Flash*)(*it))->LPA) {
 				prev_LPA = ((NVM_Transaction_Flash*)(*it))->LPA;
 				adjustHotDataLRU((NVM_Transaction_Flash*)(*it));
-			}
-
+			} 
+			*/
 			if (is_lpa_locked_for_gc((*it)->Stream_id, ((NVM_Transaction_Flash*)(*it))->LPA)) {
 				//iterator should be post-incremented since the iterator may be deleted from list
 				manage_user_transaction_facing_barrier((NVM_Transaction_Flash*)*(it++));
@@ -1329,7 +1329,7 @@ namespace SSD_Components
 		* function call in the above code blocks. Otherwise, GC may be invoked (due to the call to Allocate_block_....) and
 		* may decide to move a page that is just invalidated.*/
 		if (is_for_gc) {
-			block_manager->Allocate_block_and_page_in_plane_for_gc_write(transaction->Stream_id, transaction->Address, transaction->isSLCTrx);
+			block_manager->Allocate_block_and_page_in_plane_for_gc_write(transaction->Stream_id, transaction->Address);
 		} else {
 			block_manager->Allocate_block_and_page_in_plane_for_user_write(transaction->Stream_id, transaction->Address, transaction->isSLCTrx);
 		}
