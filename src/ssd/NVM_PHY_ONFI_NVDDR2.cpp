@@ -586,6 +586,7 @@ namespace SSD_Components {
 						_my_instance->WaitingReadTX[chip->ChannelID].push_back((*it));
 						break;
 					case Transaction_Source_Type::GC_WL:
+					case Transaction_Source_Type::MIGRATION:
 						_my_instance->WaitingGCRead_TX[chip->ChannelID].push_back((*it));
 						break;
 					case Transaction_Source_Type::MAPPING:

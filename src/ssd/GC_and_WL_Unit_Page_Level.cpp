@@ -182,9 +182,8 @@ namespace SSD_Components
 				return; //여유가 없으므로 앞으로 들어오는 slc transaction은 FBM::Allocate block and page in plane for user write에서 tlc로 전환됨
 			
 			//다음 slc 트랜잭션 처리를 위해 Data_wf_slc 할당
-			pbke->Data_wf_slc[stream_id] = (*pbke->free_slc_blocks.begin()).second;
-			pbke->free_slc_blocks.erase(pbke->free_slc_blocks.begin());
-			pbke->Data_wf_slc[stream_id]->Stream_id = stream_id;
+			pbke->Data_wf_slc[stream_id] = pbke->Get_a_free_block(stream_id,false,true);
+			
 			//gc를 수행할 수 있으므로 slc_block_history에서 삭제
 			pbke->slc_block_history.pop();
 

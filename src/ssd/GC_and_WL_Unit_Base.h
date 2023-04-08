@@ -103,6 +103,7 @@ namespace SSD_Components
 
 		SLC_Table *slc_table;
 		friend class Tiering_Area_Controller;
+		friend class Tiering_Area_Controller_Base;
 	};
 }
 

@@ -174,6 +174,7 @@ void TSU_OutOfOrder::Schedule()
 				MappingReadTRQueue[(*it)->Address.ChannelID][(*it)->Address.ChipID].push_back((*it));
 				break;
 			case Transaction_Source_Type::GC_WL:
+			case Transaction_Source_Type::MIGRATION:
 				GCReadTRQueue[(*it)->Address.ChannelID][(*it)->Address.ChipID].push_back((*it));
 				break;
 			default:
@@ -191,6 +192,7 @@ void TSU_OutOfOrder::Schedule()
 				MappingWriteTRQueue[(*it)->Address.ChannelID][(*it)->Address.ChipID].push_back((*it));
 				break;
 			case Transaction_Source_Type::GC_WL:
+			case Transaction_Source_Type::MIGRATION:
 				GCWriteTRQueue[(*it)->Address.ChannelID][(*it)->Address.ChipID].push_back((*it));
 				break;
 			default:

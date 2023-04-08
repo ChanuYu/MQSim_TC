@@ -221,7 +221,7 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 
 		//std::cout<<"**"<<lpa<<std::endl;
 		
-		if(lpa%19==0)
+		if(lpa%25==0)
 			(*p_table)->changeEntryModeTo(user_request->Stream_id,lpa,Flash_Technology_Type::SLC);
 		bool isSLCTrx = (*p_table)->isLPAEntrySLC(user_request->Stream_id,lpa);
 		//bool isSLCTrx = false;

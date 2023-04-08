@@ -50,7 +50,6 @@ namespace SSD_Components
 			case Transaction_Source_Type::USERIO:
 			case Transaction_Source_Type::MAPPING:
 			case Transaction_Source_Type::CACHE:
-			case Transaction_Source_Type::Migration:
 				switch (transaction->Type)
 				{
 					case Transaction_Type::READ:
@@ -72,9 +71,6 @@ namespace SSD_Components
 						//std::cout<<"handle_trx_serviced "<<transaction->Address.ChannelID<<"-"<<transaction->Address.ChipID<<"-"<<transaction->Address.DieID<<"-"<<transaction->Address.PlaneID<<", is slc: "<<transaction->isSLCTrx<<std::endl;
 						_my_instance->tsu->Prepare_for_transaction_submit();
 						NVM_Transaction_Flash_ER* gc_wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, block->Stream_id, gc_wl_candidate_address,transaction->isSLCTrx);
-						
-						if(transaction->isSLCTrx)
-							Stats::Total_slc_area_gc_executions++;						
 						
 						//If there are some valid pages in block, then prepare flash transactions for page movement
 						if (block->Current_page_write_index - block->Invalid_page_count > 0) {
@@ -113,7 +109,7 @@ namespace SSD_Components
 				return;
 		}
 
-		//GC_WL의 경우
+		//GC_WL + MIGRATION의 경우
 		switch (transaction->Type) {
 			case Transaction_Type::READ:
 			{

@@ -21,10 +21,12 @@ namespace SSD_Components
         void increaseSLCArea(unsigned int change_amount);
         void decreaseSLCArea(unsigned int change_amount);
         bool needToMigrate(PlaneBookKeepingType *pbke);
-        void migrate(std::vector<LPA_type> &victim_pages);
-        void executeSLCGC(NVM_Transaction_Flash*);
+        void migrate(NVM::FlashMemory::Physical_Page_Address &block_address,PlaneBookKeepingType *pbke);
         void getVictimPages(std::vector<LPA_type> &victim_pages, PlaneBookKeepingType *pbke);
-    
+
+        void executeHotdataTiering(NVM::FlashMemory::Flash_Chip *chip);
+        void executeCompression(NVM::FlashMemory::Flash_Chip *chip);
+
         int calculateSpaceToBeAdjusted(double util);
     private:
         double getIdealSLCRatio(double util);

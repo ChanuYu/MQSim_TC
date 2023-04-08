@@ -57,6 +57,21 @@ namespace SSD_Components
 			}
 		}
 	}
+
+	//TAC 모듈에게 브로드캐스트를 하기 위한 핸들러 설정
+	void TSU_Base::ConnectToChipIdleSignal(ChipIdleHandlerType function)
+	{
+		connectedChipIdleHandlers.push_back(function);
+	}
+
+	//TAC모듈로 전파
+	void TSU_Base::broadcastChipIdleSignal(NVM::FlashMemory::Flash_Chip* chip)
+	{
+		for (std::vector<ChipIdleHandlerType>::iterator it = connectedChipIdleHandlers.begin();
+			it != connectedChipIdleHandlers.end(); it++) {
+			(*it)(chip);
+		}
+	}
 	
 	void TSU_Base::handle_chip_idle_signal(NVM::FlashMemory::Flash_Chip* chip)
 	{
@@ -84,6 +99,7 @@ namespace SSD_Components
 			//sourceQueue1에서 multiplane이 가능한지 확인
 			for (Flash_Transaction_Queue::iterator it = sourceQueue1->begin(); it != sourceQueue1->end();)
 			{
+				//sourceQueue에 쌓여있는 트랜잭션 중에서 같은 다이 내에 있는 트랜잭션들을 골라서 함께 수행 (multi-plane command)
 				if (transaction_is_ready(*it) && (*it)->Address.DieID == dieID && !(planeVector & 1 << (*it)->Address.PlaneID)) //현재까지 multiplane 적용한 것과 다르면
 				{
 					//Check for identical pages when running multiplane command

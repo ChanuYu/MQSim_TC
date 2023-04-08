@@ -66,6 +66,9 @@ public:
 	virtual void Schedule() = 0;
 	virtual void Report_results_in_XML(std::string name_prefix, Utils::XmlWriter &xmlwriter);
 
+	typedef void(*ChipIdleHandlerType) (NVM::FlashMemory::Flash_Chip*);
+	void ConnectToChipIdleSignal(ChipIdleHandlerType);
+
 protected:
 	FTL *ftl;
 	NVM_PHY_ONFI_NVDDR2 *_NVMController;
@@ -79,7 +82,7 @@ protected:
 	sim_time_type eraseReasonableSuspensionTimeForRead; //the time period
 	sim_time_type eraseReasonableSuspensionTimeForWrite;
 	flash_chip_ID_type *Round_robin_turn_of_channel; //Used for round-robin service of the chips in channels
-
+	
 	static TSU_Base *_my_instance;
 	std::list<NVM_Transaction_Flash *> transaction_receive_slots;  //Stores the transactions that are received for sheduling
 	std::list<NVM_Transaction_Flash *> transaction_dispatch_slots; //Used to submit transactions to the channel controller
@@ -91,15 +94,21 @@ protected:
 	static void handle_channel_idle_signal(flash_channel_ID_type);
 	static void handle_chip_idle_signal(NVM::FlashMemory::Flash_Chip *chip);
 	int opened_scheduling_reqs;
+
+	std::vector<ChipIdleHandlerType> connectedChipIdleHandlers;
+	void broadcastChipIdleSignal(NVM::FlashMemory::Flash_Chip* chip);
+
 	void process_chip_requests(NVM::FlashMemory::Flash_Chip* chip)
 	{
 		if (!_my_instance->service_read_transaction(chip)) {
 			if (!_my_instance->service_write_transaction(chip)) {
-				_my_instance->service_erase_transaction(chip);
+				if(!_my_instance->service_erase_transaction(chip)) {
+					//TAC 모듈로 broadcast
+					broadcastChipIdleSignal(chip);
+				}
 			}
 		}
 	}
-
 private:
 	bool transaction_is_ready(NVM_Transaction_Flash* transaction)
 	{

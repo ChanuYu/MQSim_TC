@@ -17,6 +17,7 @@ namespace SSD_Components
 
     enum class ChannelStatus_BI {BUSY, IDLE};
     enum class ChipStatus_BI {BUSY, IDLE};
+    enum class SelectedAction {TIERING, COMPRESSION};
 
     class Tiering_Area_Controller_Base
     {
@@ -41,12 +42,17 @@ namespace SSD_Components
         virtual void decreaseSLCArea(unsigned int change_amount) = 0;
         
         virtual bool needToMigrate(PlaneBookKeepingType *pbke) = 0;
-        virtual void migrate(std::vector<LPA_type> &victim_pages) = 0;
-        virtual void executeSLCGC(NVM_Transaction_Flash*) = 0;
+        virtual void migrate(NVM::FlashMemory::Physical_Page_Address &block_address,PlaneBookKeepingType *pbke) = 0;
 
         //amu에서 처리
         virtual void getVictimPages(std::vector<LPA_type> &victim_pages, PlaneBookKeepingType *pbke) = 0;
         
+        //압축 혹은 티어링 중 무엇을 선택할지 선택하는 함수
+        SelectedAction selectAction(NVM::FlashMemory::Flash_Chip *chip);
+
+        virtual void executeHotdataTiering(NVM::FlashMemory::Flash_Chip *chip) = 0;
+        virtual void executeCompression(NVM::FlashMemory::Flash_Chip *chip) = 0;
+
         //HIL에서 on the fly requests가 0이 되거나 새로 추가되거나 할 때 호출
         void setNoRequestFlag() {no_request_on_Q = true;}
         void resetNoRequestFlag() {no_request_on_Q = false;}
