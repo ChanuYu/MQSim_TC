@@ -65,12 +65,8 @@ namespace SSD_Components
 
 		//The current write frontier block is written to the end
 		if((*data_wf)->Current_page_write_index == (*data_wf)->Last_page_index + 1) {
-			//블록을 다 사용한 경우에 한 해서 slc_block_history에 추가
-			plane_record->slc_block_history.push((*data_wf)->BlockID);
-
 			//Assign a new write frontier block
 			(*data_wf) = plane_record->Get_a_free_block(stream_id,false,isSLC); //slc의 경우 더 이상 free block이 없으면 NULL 반환	
-			
 			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address,stream_id,isSLC); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함
 		}
 
@@ -199,6 +195,11 @@ namespace SSD_Components
 		plane_record->Invalid_pages_count -= block->Invalid_page_count;
 
 		Stats::Block_erase_histogram[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID][block->Erase_count]--;
+		
+		//erase된 블록은 무조건 tlc free block pool에 추가. slc 영역에서 Get_a_free_block 하기 위해서는 transformToSLCBlock()이 호출되어야 함
+		if(block->isSLC)
+			plane_record->slc_blocks.erase(block->BlockID);
+		
 		block->Erase();
 		Stats::Block_erase_histogram[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID][block->Erase_count]++;
 		plane_record->Add_to_free_block_pool(block, gc_and_wl_unit->Use_dynamic_wearleveling());

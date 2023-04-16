@@ -58,8 +58,10 @@ namespace SSD_Components
 		//is_slc가 true인 경우는 Allocate block and page in plane for user write에서만 호출됨 
 		if(is_slc) {
 			//slc의 경우 data_wf_slc가 다 떨어진 경우에만 gc 수행
-			if(pbke->Data_wf_slc[stream_id]==NULL){
+			if(pbke->Data_wf_slc[stream_id]==NULL && pbke->slc_block_history.size()>0){
 				gc_candidate_block_id = pbke->slc_block_history.front(); //queue에서 지우는 건 마지막 조건까지 다 되는 경우
+				if(pbke->Blocks[gc_candidate_block_id].isSLC==false)
+					PRINT_ERROR("The block should be selected from SLC")
 				if (pbke->Ongoing_erase_operations.size() >= max_ongoing_gc_reqs_per_plane)
 					return;
 			}
@@ -67,7 +69,7 @@ namespace SSD_Components
 				return;
 		} else {
 			if (free_block_pool_size < block_pool_gc_threshold) {
-			//RGA 방식이기에 여기서 쓰이는 Get_coldest_block_id()는 의미가 없음
+				//RGA 방식이기에 여기서 쓰이는 Get_coldest_block_id()는 의미가 없음
 				gc_candidate_block_id = block_manager->Get_coldest_block_id(plane_address);
 
 				if (pbke->Ongoing_erase_operations.size() >= max_ongoing_gc_reqs_per_plane) {
@@ -96,12 +98,10 @@ namespace SSD_Components
 						while (random_set.size() < rga_set_size) {
 							unsigned int limit_inclusive = block_no_per_plane - 1;
 							flash_block_ID_type block_id = random_generator.Uniform_uint(0, limit_inclusive);
-
 							if (pbke->Ongoing_erase_operations.find(block_id) == pbke->Ongoing_erase_operations.end()
-								&& is_safe_gc_wl_candidate(pbke, block_id)) {
+								&& is_safe_gc_wl_candidate(pbke, block_id) && !pbke->Blocks[block_id].isSLC) {
 								random_set.insert(block_id);
 							}
-							
 						}
 						gc_candidate_block_id = *random_set.begin();
 						for(auto &block_id : random_set) {

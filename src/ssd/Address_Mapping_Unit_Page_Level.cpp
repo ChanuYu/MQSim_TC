@@ -702,9 +702,9 @@ namespace SSD_Components
 	{
 		//이전에 program된 데이터의 PPA를 GlobalMapTable에서 가져옴
 		PPA_type ppa = domains[streamID]->Get_ppa(ideal_mapping_table, streamID, transaction->LPA);
-
 		if (transaction->Type == Transaction_Type::READ) {
 			if (ppa == NO_PPA) {
+				transaction->isSLCTrx = false;
 				ppa = online_create_entry_for_reads(transaction->LPA, streamID, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->read_sectors_bitmap);
 			}
 			transaction->PPA = ppa;
@@ -725,7 +725,7 @@ namespace SSD_Components
 			
 			//there are too few free pages remaining only for GC
 			if (ftl->GC_and_WL_Unit->Stop_servicing_writes(transaction->Address,false)){ //slc에 여유공간이 없으면 tlc로 전환하므로 여기서는 is_slc = false로 전달
-				std::cout<<"stop servicing writes"<<std::endl;
+				std::cout<<"Address_Mapping_Unit_Page_Level::stop servicing writes"<<std::endl;
 				return false;
 			}
 
@@ -1296,18 +1296,21 @@ namespace SSD_Components
 				if (page_status_in_cmt != transaction->write_sectors_bitmap)
 					PRINT_ERROR("Unexpected mapping table status in allocate_page_in_plane_for_user_write for a GC/WL write!")
 			} else {
+				//prev page status: global mapping table에 적혀있는 페이지 상태 정보
+				//status intersection: 페이지내에서 새로운 섹터에 쓰이는 것까지 반영한 페이지 내의 섹터 정보
 				page_status_type prev_page_status = domain->Get_page_status(ideal_mapping_table, transaction->Stream_id, transaction->LPA);
 				page_status_type status_intersection = transaction->write_sectors_bitmap & prev_page_status;
 				//check if an update read is required
-				if (status_intersection == prev_page_status) {
+				if (status_intersection == prev_page_status) { //기존에 쓰인 섹터에 대한 업데이트이므로 페이지를 invalid로 표시하고 새로 써야 함
 					NVM::FlashMemory::Physical_Page_Address addr;
 					Convert_ppa_to_address(old_ppa, addr);
 					block_manager->Invalidate_page_in_block(transaction->Stream_id, addr);
 				} else {
+					//안 쓰였던 섹터에 내용을 새로 쓰는 경우, 기존에 쓰인 내용을 다 읽고 새로 써야 함
 					page_status_type read_pages_bitmap = status_intersection ^ prev_page_status; //read update가 필요한 sector의 비트맵
 					NVM_Transaction_Flash_RD *update_read_tr = new NVM_Transaction_Flash_RD(transaction->Source, transaction->Stream_id,
 						count_sector_no_from_status_bitmap(read_pages_bitmap) * SECTOR_SIZE_IN_BYTE, transaction->LPA, old_ppa, transaction->UserIORequest,
-						transaction->Content, transaction, read_pages_bitmap, domain->GlobalMappingTable[transaction->LPA].TimeStamp);
+						transaction->Content, transaction, read_pages_bitmap, domain->GlobalMappingTable[transaction->LPA].TimeStamp, transaction->isSLCTrx);
 					Convert_ppa_to_address(old_ppa, update_read_tr->Address);
 					block_manager->Read_transaction_issued(update_read_tr->Address);//Inform block manager about a new transaction as soon as the transaction's target address is determined
 					block_manager->Invalidate_page_in_block(transaction->Stream_id, update_read_tr->Address);
@@ -1934,12 +1937,15 @@ namespace SSD_Components
 						Set_barrier_for_accessing_mvpn(block->Stream_id, mpvn);
 					}
 				} else {
-					LPA_type lpa = flash_controller->Get_metadata(addr.ChannelID, addr.ChipID, addr.DieID, addr.PlaneID, addr.BlockID, addr.PageID);
+					LPA_type lpa = flash_controller->Get_metadata(addr.ChannelID, addr.ChipID, addr.DieID, addr.PlaneID, addr.BlockID, addr.PageID);	
 					LPA_type ppa = domains[block->Stream_id]->GlobalMappingTable[lpa].PPA;
+					//if(lpa == NO_LPA)
+					//	continue;
 					if (domains[block->Stream_id]->CMT->Exists(block->Stream_id, lpa)) {
 						ppa = domains[block->Stream_id]->CMT->Retrieve_ppa(block->Stream_id, lpa);
 					}
 					if (ppa != Convert_address_to_ppa(addr)) {
+						std::cout<<"LPA: "<<lpa<<", PPA: "<<ppa<<std::endl;
 						PRINT_ERROR("Inconsistency in the global mapping table when locking an LPA!")
 					}
 					Set_barrier_for_accessing_lpa(block->Stream_id, lpa);
@@ -1952,6 +1958,7 @@ namespace SSD_Components
 	{
 		auto itr = domains[stream_id]->Locked_LPAs.find(lpa);
 		if (itr == domains[stream_id]->Locked_LPAs.end()) {
+			std::cout<<"lpa: "<<lpa<<std::endl;
 			PRINT_ERROR("Illegal operation: Unlocking an LPA that has not been locked!");
 		}
 		domains[stream_id]->Locked_LPAs.erase(itr);

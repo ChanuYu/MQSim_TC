@@ -465,7 +465,7 @@ namespace SSD_Components {
 	#if 0
 				if (tr->ExecutionMode != ExecutionModeType::COPYBACK)
 	#endif
-				broadcastTransactionServicedSignal(dieBKE->ActiveTransfer); //handle_ready_signal_from_chip()에서 read는 따로 처리하지 않았고, 여기서 처리함
+				broadcastTransactionServicedSignal(dieBKE->ActiveTransfer);
 
 				for (std::list<NVM_Transaction_Flash*>::iterator it = dieBKE->ActiveTransactions.begin();
 					it != dieBKE->ActiveTransactions.end(); it++) {

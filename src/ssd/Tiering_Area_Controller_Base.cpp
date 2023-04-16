@@ -67,7 +67,7 @@ namespace SSD_Components
 
     SelectedAction Tiering_Area_Controller_Base::selectAction(NVM::FlashMemory::Flash_Chip *chip)
     {
-
+        return SelectedAction::TIERING;
     }
 
     /**
@@ -120,6 +120,7 @@ namespace SSD_Components
         //double util = _my_instance->getCurrentUtilization();
         //Block_Pool_Slot_Type *block;
         //slc 영역 GC 혹은 마이그레이션 호출
+        /*
         if(free_block_pool_size < _my_instance->gc_wl->block_pool_gc_threshold - 1) {
             if(!pbke->slc_blocks.size())
                 return; //이미 slc 영역이 존재하지 않음
@@ -143,6 +144,7 @@ namespace SSD_Components
 
             _my_instance->migrate(block_address, pbke);
         }
+        */
         
         
     }

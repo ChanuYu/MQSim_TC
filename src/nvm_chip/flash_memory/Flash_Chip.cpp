@@ -164,6 +164,9 @@ namespace NVM
 					for (unsigned int planeCntr = 0; planeCntr < command->Address.size(); planeCntr++) {
 						STAT_readCount++;
 						targetDie->Planes[command->Address[planeCntr].PlaneID]->Read_count++;
+						//if(targetDie->Planes[command->Address[planeCntr].PlaneID]->Blocks[command->Address[planeCntr].BlockID]->Pages[command->Address[planeCntr].PageID].Metadata.LPA==NO_LPA)
+						//	targetDie->Planes[command->Address[planeCntr].PlaneID]->Blocks[command->Address[planeCntr].BlockID]->Pages[command->Address[planeCntr].PageID].Write_metadata(command->Meta_data[planeCntr]);
+						//else
 						targetDie->Planes[command->Address[planeCntr].PlaneID]->Blocks[command->Address[planeCntr].BlockID]->Pages[command->Address[planeCntr].PageID].Read_metadata(command->Meta_data[planeCntr]);
 					}
 					break;

@@ -169,6 +169,7 @@ namespace SSD_Components
 
 				//GC Erase Transaction 완료 이후의 StopServicing write의 검사는 TLC영역의 크기 확인을 위해서 진행
 				if (_my_instance->Stop_servicing_writes(transaction->Address,false)) {
+					std::cout<<"GC_and_WL_Unit_Base::stop servicing writes"<<std::endl;
 					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(false), transaction->Address,transaction->Stream_id);
 				}
 				break;

@@ -151,7 +151,11 @@ namespace SSD_Components
 		free_block_pool.erase(free_block_pool.begin());
 		new_block->Stream_id = stream_id;
 		new_block->Holds_mapping_data = for_mapping_data;
-		Block_usage_history.push(new_block->BlockID);
+
+		if(for_slc)
+			slc_block_history.push(new_block->BlockID);
+		else
+			Block_usage_history.push(new_block->BlockID);
 
 		return new_block;
 	}
