@@ -78,7 +78,8 @@ namespace SSD_Components
 		std::map<flash_block_ID_type,Block_Pool_Slot_Type*> slc_blocks; //slc모드로 programmed된 블록을 관리
 		std::multimap<unsigned int, Block_Pool_Slot_Type*> free_slc_blocks; //아직 program되지 않은 slc블록 관리
 		Block_Pool_Slot_Type** Data_wf_slc;  //**GC_wf_slc; //두 개 스트림(멀티스트림)까지만 호환가능
-		std::queue<flash_block_ID_type> slc_block_history; 
+		std::queue<flash_block_ID_type> slc_block_history;
+		Block_Pool_Slot_Type * latest_data_wf_slc;
 
 		//GC victim block 선정방식이 FIFO가 아니라면 신경 쓸 필요 x <- TLC Compression을 위해 고려해야 함 (SLC/TLC 구분해서 관리)
 		std::queue<flash_block_ID_type> Block_usage_history;//A fifo queue that keeps track of flash blocks based on their usage history

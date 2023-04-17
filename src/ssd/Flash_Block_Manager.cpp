@@ -65,6 +65,8 @@ namespace SSD_Components
 
 		//The current write frontier block is written to the end
 		if((*data_wf)->Current_page_write_index == (*data_wf)->Last_page_index + 1) {
+			plane_record->latest_data_wf_slc = (*data_wf);
+			
 			//Assign a new write frontier block
 			(*data_wf) = plane_record->Get_a_free_block(stream_id,false,isSLC); //slc의 경우 더 이상 free block이 없으면 NULL 반환	
 			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(isSLC), page_address,stream_id,isSLC); //기존 프리블록 풀 뿐만 아니라 SLC free block pool도 고려하도록 수정해야함

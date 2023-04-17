@@ -68,6 +68,7 @@ namespace SSD_Components
 						//수정 - 23.03.15
 						plane_manager[channelID][chipID][dieID][planeID].Data_wf_slc = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
 						//plane_manager[channelID][chipID][dieID][planeID].GC_wf_slc = new Block_Pool_Slot_Type*[total_concurrent_streams_no];
+						plane_manager[channelID][chipID][dieID][planeID].latest_data_wf_slc = NULL;
 						for (unsigned int stream_cntr = 0; stream_cntr < total_concurrent_streams_no; stream_cntr++) {
 							plane_manager[channelID][chipID][dieID][planeID].Data_wf[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, false);
 							plane_manager[channelID][chipID][dieID][planeID].Translation_wf[stream_cntr] = plane_manager[channelID][chipID][dieID][planeID].Get_a_free_block(stream_cntr, true);

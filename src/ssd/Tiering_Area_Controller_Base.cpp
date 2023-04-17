@@ -120,16 +120,18 @@ namespace SSD_Components
         //double util = _my_instance->getCurrentUtilization();
         //Block_Pool_Slot_Type *block;
         //slc 영역 GC 혹은 마이그레이션 호출
-        /*
+        
         if(free_block_pool_size < _my_instance->gc_wl->block_pool_gc_threshold - 1) {
-            if(!pbke->slc_blocks.size())
+            if(pbke->slc_blocks.empty())
                 return; //이미 slc 영역이 존재하지 않음
             NVM::FlashMemory::Physical_Page_Address block_address = transaction->Address;
             block_address.BlockID = pbke->slc_block_history.front();
             //block = &pbke->Blocks[block_id];
 
+            if(!_my_instance->gc_wl->is_safe_gc_wl_candidate(pbke,block_address.BlockID))
+                return;
+
             if (pbke->Ongoing_erase_operations.find(block_address.BlockID) != pbke->Ongoing_erase_operations.end()) {
-                PRINT_ERROR("TAC::GC operation has already operated on the block")
                 return;
             }
             
@@ -139,12 +141,12 @@ namespace SSD_Components
             //해결: on_going_gc_wl 플래그가 true이면 gc를 수행하므로 리턴
             //이 경우 마이그레이션을 강제로 수행할 것인가??
             //gc를 우선 수행하고 마이그레이션을 미룬다면 성능을 더 높일 수 있으니 일단 return 방식
-            if (_my_instance->block_manager->Block_has_ongoing_gc_wl(transaction->Address))
+            if (_my_instance->block_manager->Block_has_ongoing_gc_wl(block_address))
                 return;
 
             _my_instance->migrate(block_address, pbke);
-        }
-        */
+        } 
+        
         
         
     }

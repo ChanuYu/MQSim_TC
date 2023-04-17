@@ -22,7 +22,7 @@
 			<Seed>798</Seed>
 			<Average_No_of_Reqs_in_Queue>16</Average_No_of_Reqs_in_Queue>
 			<Intensity>32768</Intensity>
-			<Stop_Time>500000000000</Stop_Time>
+			<Stop_Time>1000000000000</Stop_Time>
 			<Total_Requests_To_Generate>0</Total_Requests_To_Generate>
 		</IO_Flow_Parameter_Set_Synthetic>
 	</IO_Scenario>

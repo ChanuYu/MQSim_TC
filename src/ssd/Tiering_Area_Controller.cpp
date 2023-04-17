@@ -90,6 +90,9 @@ namespace SSD_Components
 		pbke->Ongoing_erase_operations.insert(block_id);
 		_my_instance->amu->Set_barrier_for_accessing_physical_block(block_address);//Lock the block, so no user request can intervene while the GC is progressing
 		
+        pbke->slc_block_history.pop();
+        pbke->slc_blocks.erase(block_id);
+
         //If there are ongoing requests targeting the candidate block, the gc execution should be postponed
 		if (block_manager->Can_execute_gc_wl(block_address)) { //해당 block에 ongoing user program count와 ongoing user read count가 0이어야 함
 			Stats::Total_gc_executions++;

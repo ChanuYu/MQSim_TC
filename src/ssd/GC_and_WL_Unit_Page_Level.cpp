@@ -58,10 +58,22 @@ namespace SSD_Components
 		//is_slc가 true인 경우는 Allocate block and page in plane for user write에서만 호출됨 
 		if(is_slc) {
 			//slc의 경우 data_wf_slc가 다 떨어진 경우에만 gc 수행
-			if(pbke->Data_wf_slc[stream_id]==NULL && pbke->slc_block_history.size()>0){
+			if(pbke->Data_wf_slc[stream_id]==NULL/*&& pbke->slc_block_history.size()>0*/){
 				gc_candidate_block_id = pbke->slc_block_history.front(); //queue에서 지우는 건 마지막 조건까지 다 되는 경우
-				if(pbke->Blocks[gc_candidate_block_id].isSLC==false)
+
+				//Allocate block and page in plane for user write -> Get a free block 흐름으로
+				//블록의 마지막 페이지에 대한 트랜잭션이 완전히 처리되지 않은 상태에서 호출된 경우는 slc gc가 일어나지 않도록 해야 함 (Set barrier 함수에서 에러 발생함)
+				if(&pbke->Blocks[gc_candidate_block_id]==pbke->latest_data_wf_slc)
+				{
+					pbke->latest_data_wf_slc = NULL;
+					return;
+				}
+
+				if(!pbke->Blocks[gc_candidate_block_id].isSLC)
+				{
+					std::cout<<"slc history size: "<<pbke->slc_block_history.size()<<std::endl;
 					PRINT_ERROR("The block should be selected from SLC")
+				}
 				if (pbke->Ongoing_erase_operations.size() >= max_ongoing_gc_reqs_per_plane)
 					return;
 			}
