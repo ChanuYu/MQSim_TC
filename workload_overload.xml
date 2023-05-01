@@ -12,8 +12,8 @@
 			<Working_Set_Percentage>50</Working_Set_Percentage>
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
 			<Read_Percentage>0</Read_Percentage>
-			<Address_Distribution>RANDOM_UNIFORM</Address_Distribution>
-			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
+			<Address_Distribution>RANDOM_HOTCOLD</Address_Distribution>
+			<Percentage_of_Hot_Region>5</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
 			<Address_Alignment_Unit>16</Address_Alignment_Unit>
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>

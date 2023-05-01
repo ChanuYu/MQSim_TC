@@ -482,11 +482,65 @@ namespace SSD_Components
 		return domains[stream_id]->No_of_inserted_entries_in_preconditioning;
 	}
 
+	void Address_Mapping_Unit_Page_Level::insertHotDataLRU(LPA_type lpa, AdjustType type)
+	{
+		if(type==AdjustType::INACTIVE) { //Hotdata LRU에 존재하지 않는 상황
+			hot_data_lru_inactive.push_front(lpa);
+			auto iter = hot_data_lru_inactive.begin();
+			inactive_map.insert({lpa,iter});
+
+			if(hot_data_lru_inactive.size()>lru_size_limit) {
+				LPA_type last_lpa = hot_data_lru_inactive.back();
+				inactive_map.erase(last_lpa);
+				hot_data_lru_inactive.pop_back();
+			}
+		}
+		else { //AdjustType::ACTIVE, Hotdata LRU에 존재하는 상황 + Hotdata LRU에 존재하지 않을 수도 있음
+			auto iter1 = active_map.find(lpa);
+			auto iter2 = inactive_map.find(lpa);
+
+			if(iter1!=active_map.end()){ //active lru에 존재하던 상황
+				hot_data_lru_active.erase(iter1->second);
+				hot_data_lru_active.push_front(lpa);
+				
+				active_map.erase(lpa);
+				active_map.insert({lpa,hot_data_lru_active.begin()});
+				return;
+			} else if(iter2!=inactive_map.end()) { //inactive lru에 존재하는 상황
+				hot_data_lru_inactive.erase(iter2->second);
+				inactive_map.erase(lpa);
+
+				hot_data_lru_active.push_front(lpa);
+				auto it = hot_data_lru_active.begin();
+				active_map.insert({lpa,it});
+			} else { //SLC로 처리해야 하는데 용량이 다 차서 TLC로 간 경우
+				hot_data_lru_active.push_front(lpa);
+				auto it = hot_data_lru_active.begin();
+				active_map.insert({lpa,it});
+			}
+
+			//위의 else if와 else의 공통사항으로 active lru에서 evict 처리
+			if(hot_data_lru_active.size() > lru_size_limit) {
+				LPA_type last_lpa = hot_data_lru_active.back();
+				active_map.erase(last_lpa);
+				hot_data_lru_active.pop_back();
+
+				insertHotDataLRU(last_lpa,AdjustType::INACTIVE);
+			}
+		}
+	}
+
 	//Data Cache Manager => AMU => TSU (트랜잭션 리스트의 이동경로)
+	//SLC Buffering은 segment reuquest에서 처리. SLC 데이터의 처리는 여기서 처리
 	void Address_Mapping_Unit_Page_Level::Translate_lpa_to_ppa_and_dispatch(const std::list<NVM_Transaction*>& transactionList)
 	{
-		LPA_type prev_LPA = NO_LPA;
+		//LPA_type prev_LPA = NO_LPA;
 		//translate lpa to ppa
+		auto stream_id = (*transactionList.begin())->Stream_id;
+		LPA_type lpa;
+		PPA_type ppa;
+		NVM::FlashMemory::Physical_Page_Address addr;
+		PlaneBookKeepingType *pbke = NULL;
 		for (std::list<NVM_Transaction*>::const_iterator it = transactionList.begin();
 			it != transactionList.end(); ) {
 			/*
@@ -496,6 +550,35 @@ namespace SSD_Components
 				adjustHotDataLRU((NVM_Transaction_Flash*)(*it));
 			} 
 			*/
+			lpa = ((NVM_Transaction_Flash*)(*it))->LPA;
+			ppa = domains[stream_id]->Get_ppa(ideal_mapping_table, stream_id, lpa);
+			
+		
+			//NO_PPA의 경우 => SLC 버퍼링의 경우만 SLC trx 처리 & hotdata LRU 반영 필요 x
+			if(ppa != NO_PPA){
+				Convert_ppa_to_address(ppa,addr);
+				pbke = block_manager->Get_plane_bookkeeping_entry(addr);
+
+				//기존에 SLC에 존재하던 데이터이므로 hotdata LRU에는 존재하지 않음
+				if(pbke->Blocks[addr.BlockID].isSLC){
+					if(pbke->Data_wf_slc) {
+						((NVM_Transaction_Flash*)(*it))->isSLCTrx = true;
+					}
+					else { //SLC 영역에 여유공간이 없는 경우, 버퍼링도 불가능하므로 다 TLC trx
+						((NVM_Transaction_Flash*)(*it))->isSLCTrx = false;
+						insertHotDataLRU(lpa,AdjustType::ACTIVE);  //insert lpa into the head of active lru
+					}
+				}
+				else { //TLC에 존재하던 데이터
+					if(inactive_map.find(lpa)!=NULL || active_map.find(lpa)!=NULL){
+						insertHotDataLRU(lpa,AdjustType::ACTIVE); //insert lpa into the head of the active lru
+					}
+					else {
+						insertHotDataLRU(lpa,AdjustType::INACTIVE);//insert lpa into the ehad of the inactive lru list
+					}
+				}
+			}
+
 			if (is_lpa_locked_for_gc((*it)->Stream_id, ((NVM_Transaction_Flash*)(*it))->LPA)) {
 				//iterator should be post-incremented since the iterator may be deleted from list
 				manage_user_transaction_facing_barrier((NVM_Transaction_Flash*)*(it++));
@@ -641,6 +724,7 @@ namespace SSD_Components
 		return false;
 	}
 
+	/*
 	//trnsaction->LPA는 stream_id 내부의 lpa를 나타내지만, 실험환경에서는 multi-stream을 사용하지 않을 거라 LPA값만을 통해서 비교
 	void Address_Mapping_Unit_Page_Level::adjustHotDataLRU(NVM_Transaction_Flash* transaction)
 	{
@@ -693,7 +777,7 @@ namespace SSD_Components
 				}
 			}
 		}
-	}
+	}*/
 
 	/*This function should be invoked only if the address translation entry exists in CMT.
 	* Otherwise, the call to the CMT->Rerieve_ppa, within this function, will throw an exception.

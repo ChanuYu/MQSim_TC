@@ -11,3 +11,5 @@ res*
 !workload_overload.xml
 parse*
 *.py
+test*
+a.out

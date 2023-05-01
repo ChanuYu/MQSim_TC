@@ -19,6 +19,7 @@ namespace SSD_Components
 #define MAKE_TABLE_INDEX(LPN,STREAM)
 
 	enum class CMTEntryStatus {FREE, WAITING, VALID};
+	enum class AdjustType {ACTIVE, INACTIVE};
 
 	struct GTDEntryType //Entry type for the Global Translation Directory
 	{
@@ -178,6 +179,7 @@ namespace SSD_Components
 		bool checkFreeSLCArea(const NVM::FlashMemory::Physical_Page_Address &plane_address, stream_id_type stream_id);
 		bool checkAndAllocateNewPhysicalAddress(NVM_Transaction_Flash*);
 
+		void insertHotDataLRU(LPA_type,AdjustType);
 		void adjustHotDataLRU(NVM_Transaction_Flash*);
 		void returnVictimPages(std::vector<LPA_type> &v, unsigned int num_pages);
 

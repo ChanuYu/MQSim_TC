@@ -24,6 +24,8 @@ namespace SSD_Components
 		total_physical_pages_no = page_no_per_channel * ChannelCount;
 		total_logical_pages_no = (unsigned int)((double)total_physical_pages_no * (1 - overprovisioning_ratio));
 		max_logical_sector_address = (LHA_type)(SectorsPerPage * total_logical_pages_no - 1);
+
+		lru_size_limit = block_no_per_plane;
 	}
 
 	Address_Mapping_Unit_Base::~Address_Mapping_Unit_Base()

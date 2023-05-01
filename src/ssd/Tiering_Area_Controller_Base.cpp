@@ -146,9 +146,6 @@ namespace SSD_Components
 
             _my_instance->migrate(block_address, pbke);
         } 
-        
-        
-        
     }
 
     void Tiering_Area_Controller_Base::handleNoRequestSignal()

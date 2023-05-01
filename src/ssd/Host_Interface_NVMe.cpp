@@ -6,6 +6,8 @@
 
 #include "Stats.h"
 
+#define BUFFERING_SIZE_IN_SECTOR 64
+
 namespace SSD_Components
 {
 Input_Stream_NVMe::~Input_Stream_NVMe()
@@ -192,7 +194,7 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 {
 	LHA_type lsa = user_request->Start_LBA;
 	LHA_type lsa2 = user_request->Start_LBA;
-	unsigned int req_size = user_request->SizeInSectors;
+	unsigned int req_size = user_request->SizeInSectors; //섹터 수
 
 	page_status_type access_status_bitmap = 0;
 	unsigned int handled_sectors_count = 0;
@@ -219,9 +221,10 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		}
 		LPA_type lpa = internal_lsa / host_interface->sectors_per_page;
 
-		//std::cout<<"**"<<lpa<<std::endl;
 		
-		if(lpa%25==0)
+		//request size가 32KB보다 작은 경우에 SLC 캐싱을 위하여 SLC로 발행
+		//SLC 데이터의 처리는 AMU에서 처리
+		if(req_size < BUFFERING_SIZE_IN_SECTOR)
 			(*p_table)->changeEntryModeTo(user_request->Stream_id,lpa,Flash_Technology_Type::SLC);
 		bool isSLCTrx = (*p_table)->isLPAEntrySLC(user_request->Stream_id,lpa);
 		//bool isSLCTrx = false;

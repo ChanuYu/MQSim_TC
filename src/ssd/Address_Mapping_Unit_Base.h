@@ -39,7 +39,7 @@ namespace SSD_Components
 			bool ideal_mapping_table, unsigned int no_of_input_streams,
 			unsigned int ChannelCount, unsigned int chip_no_per_channel, unsigned int DieNoPerChip, unsigned int PlaneNoPerDie,
 			unsigned int Block_no_per_plane, unsigned int Page_no_per_block, unsigned int SectorsPerPage, unsigned int PageSizeInBytes,
-			double Overprovisioning_ratio, CMT_Sharing_Mode sharing_mode = CMT_Sharing_Mode::SHARED, bool fold_large_addresses = true, unsigned int lru_size_limit = 100000);
+			double Overprovisioning_ratio, CMT_Sharing_Mode sharing_mode = CMT_Sharing_Mode::SHARED, bool fold_large_addresses = true, unsigned int lru_size_limit = 1024);
 		virtual ~Address_Mapping_Unit_Base();
 
 		//Functions used for preconditioning
@@ -82,8 +82,12 @@ namespace SSD_Components
 	
 		virtual void returnVictimPages(std::vector<LPA_type> &v, unsigned int num_pages) = 0;
 		
-		std::list<std::pair<bool,LPA_type>> hot_data_lru_active;
-		std::list<std::pair<bool,LPA_type>> hot_data_lru_inactive;
+		//std::list<std::pair<bool,LPA_type>> hot_data_lru_active;
+		//std::list<std::pair<bool,LPA_type>> hot_data_lru_inactive;
+		std::list<LPA_type> hot_data_lru_active;
+		std::list<LPA_type> hot_data_lru_inactive;
+		std::unordered_map<LPA_type,std::list<LPA_type>::iterator> active_map;
+		std::unordered_map<LPA_type,std::list<LPA_type>::iterator> inactive_map;
 		unsigned int lru_size_limit;
 		std::set<NVM_Transaction_Flash_WR*>**** write_trx_for_overfull_plane;
 		//Tiering_Area_Controller_Base *tac;
