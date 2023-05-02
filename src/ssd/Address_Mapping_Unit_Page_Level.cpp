@@ -2021,7 +2021,7 @@ namespace SSD_Components
 						Set_barrier_for_accessing_mvpn(block->Stream_id, mpvn);
 					}
 				} else {
-					LPA_type lpa = flash_controller->Get_metadata(addr.ChannelID, addr.ChipID, addr.DieID, addr.PlaneID, addr.BlockID, addr.PageID);	
+					LPA_type lpa = flash_controller->Get_metadata(addr.ChannelID, addr.ChipID, addr.DieID, addr.PlaneID, addr.BlockID, addr.PageID);
 					LPA_type ppa = domains[block->Stream_id]->GlobalMappingTable[lpa].PPA;
 					//if(lpa == NO_LPA)
 					//	continue;

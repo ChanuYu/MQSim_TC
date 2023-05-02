@@ -341,8 +341,15 @@ namespace SSD_Components
 			return p_min_erased_block->BlockID;
 		}
 		else {
-			unsigned int min_erased_block = 0;
-			for (unsigned int i = 1; i < block_no_per_plane; i++) {
+			unsigned int min_erased_block;
+			for(int i = 0;i< block_no_per_plane; i++)
+				if(!plane_record->isBlockInSLCPool(i))
+				{
+					min_erased_block = i;
+					break;
+				}
+			
+			for (unsigned int i = 0; i < block_no_per_plane; i++) {
 				if(!plane_record->isBlockInSLCPool(i)) {
 					if (plane_record->Blocks[i].Erase_count < plane_record->Blocks[min_erased_block].Erase_count) {
 						min_erased_block = i;

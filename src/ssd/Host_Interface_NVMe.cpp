@@ -195,7 +195,8 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 	LHA_type lsa = user_request->Start_LBA;
 	LHA_type lsa2 = user_request->Start_LBA;
 	unsigned int req_size = user_request->SizeInSectors; //섹터 수
-
+	//if(req_size < BUFFERING_SIZE_IN_SECTOR)
+	//	std::cout<<"req size: "<<req_size<<std::endl;
 	page_status_type access_status_bitmap = 0;
 	unsigned int handled_sectors_count = 0;
 	unsigned int transaction_size = 0; //섹터 단위
@@ -226,6 +227,7 @@ void Input_Stream_Manager_NVMe::segment_user_request(User_Request *user_request)
 		//SLC 데이터의 처리는 AMU에서 처리
 		if(req_size < BUFFERING_SIZE_IN_SECTOR)
 			(*p_table)->changeEntryModeTo(user_request->Stream_id,lpa,Flash_Technology_Type::SLC);
+			
 		bool isSLCTrx = (*p_table)->isLPAEntrySLC(user_request->Stream_id,lpa);
 		//bool isSLCTrx = false;
 		page_status_type temp = ~(0xffffffffffffffff << (int)transaction_size);
